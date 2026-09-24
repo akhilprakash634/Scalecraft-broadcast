@@ -1,0 +1,9 @@
+<svg width="280" height="60" viewBox="0 0 280 60" xmlns="http://www.w3.org/2000/svg">
+  <!-- Ascending bar mark -->
+  <rect x="0"  y="36" width="14" height="24" rx="3" fill="#0055FF" opacity="0.22"/>
+  <rect x="18" y="24" width="14" height="36" rx="3" fill="#0055FF" opacity="0.46"/>
+  <rect x="36" y="12" width="14" height="48" rx="3" fill="#0055FF" opacity="0.72"/>
+  <rect x="54" y="0"  width="14" height="60" rx="3" fill="#0055FF"/>
+  <!-- Wordmark -->
+  <text x="80" y="40" font-family="Cabinet Grotesk, Inter, sans-serif" font-size="34" font-weight="500" fill="#111110" letter-spacing="-1.2px">ScaleCraft</text>
+</svg>

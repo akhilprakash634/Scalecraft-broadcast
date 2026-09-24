@@ -1,0 +1,11 @@
+<svg width="380" height="72" viewBox="0 0 380 72" xmlns="http://www.w3.org/2000/svg">
+  <!-- Bars -->
+  <rect x="0"  y="36" width="14" height="24" rx="3" fill="#4D8AFF" opacity="0.25"/>
+  <rect x="18" y="24" width="14" height="36" rx="3" fill="#4D8AFF" opacity="0.5"/>
+  <rect x="36" y="12" width="14" height="48" rx="3" fill="#4D8AFF" opacity="0.75"/>
+  <rect x="54" y="0"  width="14" height="60" rx="3" fill="#4D8AFF"/>
+  <!-- Wordmark -->
+  <text x="80" y="36" font-family="Cabinet Grotesk, Inter, sans-serif" font-size="30" font-weight="500" fill="#FFFFFF" letter-spacing="-1px">ScaleCraft</text>
+  <!-- Slogan -->
+  <text x="80" y="56" font-family="Inter, sans-serif" font-size="12" font-weight="400" fill="rgba(255,255,255,0.4)" letter-spacing="0.01em">What took us 5 years. Yours in a day.</text>
+</svg>

@@ -1,0 +1,28 @@
+const { createClient } = require('@supabase/supabase-js');
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env.development.local') });
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+async function check() {
+  try {
+    const { data, error } = await supabase
+      .from('agent_clients')
+      .select('id, email, business_name, created_at')
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    if (error) {
+      console.error('Error fetching clients:', error);
+    } else {
+      console.log('Recent clients:', JSON.stringify(data, null, 2));
+    }
+  } catch (err) {
+    console.error('Exception:', err.message);
+  }
+}
+
+check();

@@ -1,0 +1,84 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#0F0F0D"/>
+
+  <!-- Grid texture -->
+  <defs>
+    <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+      <path d="M 60 0 L 0 0 0 60" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="0.5"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+
+  <!-- Glows -->
+  <ellipse cx="980" cy="480" rx="340" ry="260" fill="#0055FF" opacity="0.07"/>
+  <ellipse cx="180" cy="150" rx="260" ry="200" fill="#0055FF" opacity="0.04"/>
+
+  <!-- Left accent line -->
+  <rect x="80" y="180" width="2" height="270" rx="1" fill="#0055FF" opacity="0.5"/>
+
+  <!-- Domain -->
+  <text x="100" y="104" font-family="Inter, sans-serif" font-size="14" font-weight="400" fill="rgba(255,255,255,0.22)" letter-spacing="0.06em">thescalecraft.in</text>
+
+  <!-- BAR MARK - large -->
+  <g transform="translate(100, 192)">
+    <rect x="0"   y="136" width="38" height="64"  rx="6" fill="#0055FF" opacity="0.22"/>
+    <rect x="52"  y="90"  width="38" height="110" rx="6" fill="#0055FF" opacity="0.45"/>
+    <rect x="104" y="44"  width="38" height="156" rx="6" fill="#0055FF" opacity="0.72"/>
+    <rect x="156" y="0"   width="38" height="200" rx="6" fill="#0055FF"/>
+  </g>
+
+  <!-- WORDMARK -->
+  <text x="100" y="452" font-family="Inter, sans-serif" font-size="52" font-weight="600" fill="#FFFFFF" letter-spacing="-2px">ScaleCraft</text>
+
+  <!-- SLOGAN -->
+  <text x="100" y="502" font-family="Inter, sans-serif" font-size="22" font-weight="400" fill="rgba(255,255,255,0.48)" letter-spacing="0.01em">What took us 5 years. Yours in a day.</text>
+
+  <!-- Divider -->
+  <rect x="100" y="526" width="460" height="0.5" fill="rgba(255,255,255,0.08)"/>
+
+  <!-- Bottom tags -->
+  <text x="100" y="554" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="#5B96FF" letter-spacing="0.1em">AI SYSTEMS</text>
+  <rect x="218" y="542" width="1" height="16" fill="rgba(255,255,255,0.12)"/>
+  <text x="228" y="554" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="#5B96FF" letter-spacing="0.1em">FREELANCERS</text>
+  <rect x="360" y="542" width="1" height="16" fill="rgba(255,255,255,0.12)"/>
+  <text x="370" y="554" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="#5B96FF" letter-spacing="0.1em">INDIA &amp; UAE</text>
+
+  <!-- RIGHT - Product card -->
+  <rect x="724" y="112" width="388" height="406" rx="18" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.09)" stroke-width="1"/>
+
+  <text x="756" y="158" font-family="Inter, sans-serif" font-size="11" font-weight="600" fill="rgba(255,255,255,0.28)" letter-spacing="0.12em">FIRST PRODUCT</text>
+
+  <circle cx="756" cy="188" r="4" fill="#22C55E"/>
+  <text x="769" y="193" font-family="Inter, sans-serif" font-size="13" font-weight="500" fill="#22C55E">Live now</text>
+
+  <text x="756" y="232" font-family="Inter, sans-serif" font-size="23" font-weight="600" fill="#FFFFFF" letter-spacing="-0.5px">AI Client Acquisition</text>
+  <text x="756" y="260" font-family="Inter, sans-serif" font-size="23" font-weight="600" fill="#FFFFFF" letter-spacing="-0.5px">System</text>
+
+  <rect x="756" y="280" width="320" height="0.5" fill="rgba(255,255,255,0.08)"/>
+
+  <circle cx="763" cy="308" r="2.5" fill="#0055FF"/>
+  <text x="775" y="313" font-family="Inter, sans-serif" font-size="13" fill="rgba(255,255,255,0.52)">50+ outreach scripts</text>
+
+  <circle cx="763" cy="336" r="2.5" fill="#0055FF"/>
+  <text x="775" y="341" font-family="Inter, sans-serif" font-size="13" fill="rgba(255,255,255,0.52)">Follow-up sequences (Day 3, 7, 14)</text>
+
+  <circle cx="763" cy="364" r="2.5" fill="#0055FF"/>
+  <text x="775" y="369" font-family="Inter, sans-serif" font-size="13" fill="rgba(255,255,255,0.52)">Proposal template</text>
+
+  <circle cx="763" cy="392" r="2.5" fill="#0055FF"/>
+  <text x="775" y="397" font-family="Inter, sans-serif" font-size="13" fill="rgba(255,255,255,0.52)">7-day client challenge</text>
+
+  <circle cx="763" cy="420" r="2.5" fill="#0055FF"/>
+  <text x="775" y="425" font-family="Inter, sans-serif" font-size="13" fill="rgba(255,255,255,0.52)">AI prompt library (50+ prompts)</text>
+
+  <rect x="756" y="444" width="320" height="0.5" fill="rgba(255,255,255,0.08)"/>
+
+  <text x="756" y="482" font-family="Inter, sans-serif" font-size="34" font-weight="600" fill="#FFFFFF" letter-spacing="-1px">&#8377;999</text>
+  <text x="824" y="470" font-family="Inter, sans-serif" font-size="15" fill="rgba(255,255,255,0.22)">&#8377;3,999</text>
+  <rect x="824" y="457" width="54" height="0.8" fill="rgba(255,255,255,0.22)"/>
+  <text x="888" y="470" font-family="Inter, sans-serif" font-size="11" font-weight="600" fill="#22C55E" letter-spacing="0.06em">LAUNCH PRICE</text>
+  <text x="756" y="502" font-family="Inter, sans-serif" font-size="12" fill="rgba(255,255,255,0.22)">One-time · Instant Notion access after payment</text>
+
+</svg>

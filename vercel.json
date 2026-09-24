@@ -1,0 +1,20 @@
+{
+  "functions": {
+    "src/app/api/admin/provision/install/route.ts": {
+      "maxDuration": 300
+    },
+    "src/app/api/**": {
+      "maxDuration": 60
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/trial-lifecycle",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/auto-followup",
+      "schedule": "0 9 * * *"
+    }
+  ]
+}

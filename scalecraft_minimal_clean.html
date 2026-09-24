@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #FFFFFF;
+      --bg2: #F7F7F5;
+      --bg3: #F0EFEB;
+      --dark: #111110;
+      --dark2: #1C1C1A;
+      --mid: #6F6E69;
+      --light: #AEACA5;
+      --accent: #0055FF;
+      --green: #059669;
+      --green-bg: #ECFDF5;
+      --border: #EBEBEB;
+      --border2: #D9D9D9;
+      --font-h: 'Cabinet Grotesk', sans-serif;
+      --font-b: 'Inter', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--dark);
+      font-family: var(--font-b);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    ::-webkit-scrollbar {
+      width: 3px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border2);
+      border-radius: 2px;
+    }
+
+    /* HONEST BANNER */
+    .honest-bar {
+      background: var(--dark);
+      color: rgba(255, 255, 255, 0.7);
+      padding: 11px 40px;
+      font-size: 13px;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .hb-bold {
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .hb-sep {
+      color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* NAV */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 40px;
+      height: 58px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-h);
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
+      color: var(--dark);
+      text-decoration: none;
+    }
+
+    .logo-mark {
+      width: 26px;
+      height: 26px;
+      background: var(--dark);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-mark svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 2px;
+    }
+
+    .nl {
+      padding: 6px 12px;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--mid);
+      text-decoration: none;
+      transition: all 0.15s;
+    }
+
+    .nl:hover {
+      color: var(--dark);
+      background: var(--bg2);
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-login {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--mid);
+      cursor: pointer;
+    }
+
+    .nav-cta {
+      background: var(--dark);
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font-b);
+      transition: background 0.15s;
+    }
+
+    .nav-cta:hover {
+      background: var(--accent);
+    }
+
+    /* HERO */
+    .hero {
+      padding: 88px 40px 80px;
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: start;
+    }
+
+    .hero-eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 22px;
+    }
+
+    .ey-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: blink 2s infinite;
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: 0.3
+      }
+    }
+
+    .ey-text {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--mid);
+    }
+
+    h1 {
+      font-family: var(--font-h);
+      font-size: clamp(36px, 4vw, 54px);
+      font-weight: 900;
+      line-height: 1.06;
+      letter-spacing: -2px;
+      color: var(--dark);
+      margin-bottom: 18px;
+    }
+
+    h1 em {
+      font-style: normal;
+      color: var(--accent);
+    }
+
+    .hero-sub {
+      font-size: 16px;
+      color: var(--mid);
+      line-height: 1.75;
+      margin-bottom: 32px;
+      max-width: 400px;
+    }
+
+    .hero-btns {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 36px;
+    }
+
+    .btn-dark {
+      background: var(--dark);
+      color: #fff;
+      padding: 12px 22px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font-b);
+      transition: background 0.15s;
+    }
+
+    .btn-dark:hover {
+      background: var(--accent);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--mid);
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      border: 1px solid var(--border2);
+      cursor: pointer;
+      font-family: var(--font-b);
+      transition: all 0.15s;
+    }
+
+    .btn-outline:hover {
+      color: var(--dark);
+      border-color: var(--dark);
+    }
+
+    .founder-note {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-top: 28px;
+      border-top: 1px solid var(--border);
+    }
+
+    .fn-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--bg2);
+      border: 1.5px solid var(--border2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .fn-text {
+      font-size: 13px;
+      color: var(--mid);
+      line-height: 1.5;
+    }
+
+    .fn-text strong {
+      color: var(--dark);
+      font-weight: 600;
+    }
+
+    /* PRODUCT CARD */
+    .product-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.05);
+    }
+
+    .pc-head {
+      padding: 24px 24px 0;
+    }
+
+    .pc-live {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--green-bg);
+      color: var(--green);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 11px;
+      border-radius: 100px;
+      margin-bottom: 16px;
+    }
+
+    .live-dot {
+      width: 5px;
+      height: 5px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: blink 2s infinite;
+    }
+
+    .pc-name {
+      font-family: var(--font-h);
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
+      margin-bottom: 7px;
+    }
+
+    .pc-desc {
+      font-size: 13px;
+      color: var(--mid);
+      line-height: 1.65;
+      margin-bottom: 20px;
+    }
+
+    .pc-feats {
+      list-style: none;
+      border-top: 1px solid var(--border);
+    }
+
+    .pc-feat {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--dark2);
+    }
+
+    .pc-feat:last-child {
+      border-bottom: none;
+    }
+
+    .feat-check {
+      color: var(--green);
+      font-weight: 700;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+
+    .pc-foot {
+      padding: 18px 24px 22px;
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+    }
+
+    .price-row {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .price-main {
+      font-family: var(--font-h);
+      font-size: 34px;
+      font-weight: 900;
+      letter-spacing: -1px;
+    }
+
+    .price-old {
+      font-size: 14px;
+      color: var(--light);
+      text-decoration: line-through;
+    }
+
+    .price-tag {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--green);
+      background: var(--green-bg);
+      padding: 2px 8px;
+      border-radius: 100px;
+    }
+
+    .buy-btn {
+      width: 100%;
+      padding: 13px;
+      background: var(--dark);
+      color: #fff;
+      border: none;
+      border-radius: 9px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--font-b);
+      transition: background 0.15s;
+      margin-bottom: 10px;
+    }
+
+    .buy-btn:hover {
+      background: var(--accent);
+    }
+
+    .pc-note {
+      text-align: center;
+      font-size: 11px;
+      color: var(--light);
+    }
+
+    /* DIVIDER */
+    .div {
+      height: 1px;
+      background: var(--border);
+      max-width: 100%;
+    }
+
+    /* STATS */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .stat {
+      padding: 28px 40px;
+      border-right: 1px solid var(--border);
+    }
+
+    .stat:last-child {
+      border-right: none;
+    }
+
+    .stat-n {
+      font-family: var(--font-h);
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: -0.8px;
+    }
+
+    .stat-l {
+      font-size: 12px;
+      color: var(--mid);
+      margin-top: 3px;
+    }
+
+    /* SECTIONS */
+    .section {
+      padding: 72px 40px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .sec-eyebrow {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--light);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .sec-title {
+      font-family: var(--font-h);
+      font-size: clamp(24px, 3vw, 36px);
+      font-weight: 900;
+      letter-spacing: -1px;
+      line-height: 1.1;
+      margin-bottom: 10px;
+    }
+
+    .sec-title em {
+      font-style: normal;
+      color: var(--accent);
+    }
+
+    .sec-sub {
+      font-size: 15px;
+      color: var(--mid);
+      line-height: 1.7;
+      max-width: 440px;
+    }
+
+    /* WHAT'S INSIDE */
+    .inside-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 40px;
+    }
+
+    .ig-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px;
+      transition: all 0.18s;
+    }
+
+    .ig-card:hover {
+      background: var(--white);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+      border-color: var(--border2);
+    }
+
+    .ig-icon {
+      font-size: 22px;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .ig-title {
+      font-family: var(--font-h);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: -0.2px;
+      margin-bottom: 6px;
+    }
+
+    .ig-desc {
+      font-size: 13px;
+      color: var(--mid);
+      line-height: 1.65;
+    }
+
+    /* HOW IT WORKS */
+    .how-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      margin-top: 40px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .how-step {
+      padding: 24px;
+      border-right: 1px solid var(--border);
+    }
+
+    .how-step:last-child {
+      border-right: none;
+    }
+
+    .how-num {
+      font-family: var(--font-h);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--light);
+      margin-bottom: 12px;
+    }
+
+    .how-icon {
+      font-size: 22px;
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .how-title {
+      font-family: var(--font-h);
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .how-desc {
+      font-size: 12px;
+      color: var(--mid);
+      line-height: 1.6;
+    }
+
+    /* BLOG */
+    .blog-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 40px;
+    }
+
+    .bc {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+
+    .bc:hover {
+      background: var(--white);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    }
+
+    .bc-img {
+      height: 110px;
+      background: var(--bg3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+    }
+
+    .bc-body {
+      padding: 16px;
+    }
+
+    .bc-cat {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .bc-title {
+      font-family: var(--font-h);
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.35;
+      margin-bottom: 8px;
+      letter-spacing: -0.2px;
+    }
+
+    .bc-meta {
+      font-size: 11px;
+      color: var(--light);
+    }
+
+    /* NEWSLETTER */
+    .nl-wrap {
+      padding: 0 40px 72px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .nl-box {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 48px;
+    }
+
+    .nl-title {
+      font-family: var(--font-h);
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: -0.8px;
+      margin-bottom: 8px;
+    }
+
+    .nl-title em {
+      font-style: normal;
+      color: var(--accent);
+    }
+
+    .nl-desc {
+      font-size: 14px;
+      color: var(--mid);
+      line-height: 1.7;
+      max-width: 360px;
+    }
+
+    .nl-form {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 280px;
+    }
+
+    .nl-inp {
+      padding: 11px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border2);
+      background: var(--white);
+      font-size: 13px;
+      font-family: var(--font-b);
+      color: var(--dark);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .nl-inp:focus {
+      border-color: var(--accent);
+    }
+
+    .nl-inp::placeholder {
+      color: var(--light);
+    }
+
+    .nl-btn {
+      padding: 11px;
+      background: var(--dark);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--font-b);
+      transition: background 0.15s;
+    }
+
+    .nl-btn:hover {
+      background: var(--accent);
+    }
+
+    .nl-small {
+      font-size: 11px;
+      color: var(--light);
+      text-align: center;
+    }
+
+    /* FAQ */
+    .faq-wrap {
+      padding: 0 40px 72px;
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1.5fr;
+      gap: 64px;
+    }
+
+    .faq-list {}
+
+    .faq-item {
+      border-bottom: 1px solid var(--border);
+    }
+
+    .faq-q {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 15px 0;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--dark);
+      user-select: none;
+      transition: color 0.15s;
+    }
+
+    .faq-q:hover {
+      color: var(--accent);
+    }
+
+    .faq-arr {
+      color: var(--light);
+      font-size: 11px;
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+
+    .faq-a {
+      font-size: 13px;
+      color: var(--mid);
+      line-height: 1.7;
+      padding-bottom: 15px;
+      display: none;
+    }
+
+    .faq-item.open .faq-a {
+      display: block;
+    }
+
+    .faq-item.open .faq-arr {
+      transform: rotate(180deg);
+      color: var(--accent);
+    }
+
+    .faq-item.open .faq-q {
+      color: var(--accent);
+    }
+
+    /* PROMISE */
+    .promise-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-top: 40px;
+    }
+
+    .pg {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px;
+    }
+
+    .pg-icon {
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
+
+    .pg-title {
+      font-family: var(--font-h);
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .pg-desc {
+      font-size: 13px;
+      color: var(--mid);
+      line-height: 1.6;
+    }
+
+    /* FOOTER */
+    .footer-wrap {
+      background: var(--dark);
+    }
+
+    .footer-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 48px 40px 32px;
+      display: grid;
+      grid-template-columns: 1.6fr 1fr 1fr 1fr;
+      gap: 40px;
+    }
+
+    .f-logo-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-h);
+      font-size: 15px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 10px;
+    }
+
+    .f-mark {
+      width: 24px;
+      height: 24px;
+      background: var(--accent);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .f-mark svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    .f-tagline {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.3);
+      line-height: 1.65;
+      max-width: 190px;
+      margin-bottom: 12px;
+    }
+
+    .f-founder {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.2);
+    }
+
+    .f-col h4 {
+      font-size: 10px;
+      font-weight: 700;
+      color: rgba(255, 255, 255, 0.2);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    .f-col a {
+      display: block;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.4);
+      text-decoration: none;
+      margin-bottom: 9px;
+      transition: color 0.15s;
+    }
+
+    .f-col a:hover {
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .footer-bottom {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 16px 40px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .fb {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.2);
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- HONEST BANNER - only honest message here -->
+  <div class="honest-bar">
+    <span>👋</span>
+    <span><span class="hb-bold">We're new here.</span> ScaleCraft is built on 5 years of real experience - no inflated
+      numbers, no fake reviews.</span>
+    <span class="hb-sep">·</span>
+    <span><span class="hb-bold">Be one of our first customers</span> and get direct founder support.</span>
+  </div>
+
+  <!-- NAV -->
+  <nav>
+    <a href="#" class="logo">
+      <div class="logo-mark">
+        <svg viewBox="0 0 14 14" fill="none">
+          <path d="M1 11L5 5L9 8L13 3" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </div>
+      ScaleCraft
+    </a>
+    <div class="nav-links">
+      <a href="#products" class="nl">Products</a>
+      <a href="#inside" class="nl">What's inside</a>
+      <a href="#faq" class="nl">FAQ</a>
+      <a href="#newsletter" class="nl">Newsletter</a>
+    </div>
+    <div class="nav-right">
+      <span class="nav-login">Sign in</span>
+      <button class="nav-cta">Get Started</button>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <div class="hero" id="products">
+    <div>
+      <div class="hero-eyebrow"><span class="ey-dot"></span><span class="ey-text">For freelancers in India & UAE</span>
+      </div>
+      <h1>Get clients.<br>Consistently.<br>Using <em>AI.</em></h1>
+      <p class="hero-sub">Systems and templates built from 5 years of real freelancing experience - so you don't have to
+        spend years figuring it out yourself.</p>
+      <div class="hero-btns">
+        <button class="btn-dark">Get the System →</button>
+        <button class="btn-outline">See what's inside</button>
+      </div>
+      <div class="founder-note">
+        <div class="fn-avatar">👨‍💻</div>
+        <p class="fn-text"><strong>Built by Akhil</strong> - 5 years in IT Industry & AI consulting, Kerala. Every
+          script and template in this product is something I use myself.</p>
+      </div>
+    </div>
+
+    <div>
+      <div class="product-card">
+        <div class="pc-head">
+          <div class="pc-live"><span class="live-dot"></span>Live Now</div>
+          <div class="pc-name">AI Client Acquisition System</div>
+          <div class="pc-desc">The complete Notion workspace to land freelance clients using AI. Scripts, templates,
+            tracker, and a 7-day challenge.</div>
+          <ul class="pc-feats">
+            <li class="pc-feat"><span class="feat-check">✓</span>50+ outreach scripts (DM, email, LinkedIn)</li>
+            <li class="pc-feat"><span class="feat-check">✓</span>Follow-up sequences - Day 3, 7, 14</li>
+            <li class="pc-feat"><span class="feat-check">✓</span>Word-for-word discovery call script</li>
+            <li class="pc-feat"><span class="feat-check">✓</span>Proposal template that closes clients</li>
+            <li class="pc-feat"><span class="feat-check">✓</span>7-day challenge - zero to first client</li>
+            <li class="pc-feat"><span class="feat-check">✓</span>AI prompt library (50+ prompts)</li>
+          </ul>
+        </div>
+        <div class="pc-foot">
+          <div class="price-row">
+            <span class="price-main">₹999</span>
+            <span class="price-old">₹3,999</span>
+            <span class="price-tag">Launch price</span>
+          </div>
+          <button class="buy-btn">Get Instant Access →</button>
+          <p class="pc-note">One-time · Instant Notion access · UPI & card accepted</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="div"></div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat">
+      <div class="stat-n">5 yrs</div>
+      <div class="stat-l">Real market experience</div>
+    </div>
+    <div class="stat">
+      <div class="stat-n">Kerala+UAE</div>
+      <div class="stat-l">Market focus</div>
+    </div>
+    <div class="stat">
+      <div class="stat-n">₹999</div>
+      <div class="stat-l">One-time, no subscription</div>
+    </div>
+    <div class="stat">
+      <div class="stat-n">Instant</div>
+      <div class="stat-l">Notion access after payment</div>
+    </div>
+  </div>
+
+  <div class="div"></div>
+
+  <!-- WHAT'S INSIDE -->
+  <div class="section" id="inside">
+    <div class="sec-eyebrow">What's inside</div>
+    <div class="sec-title">Not a course.<br>A <em>working system.</em></div>
+    <p class="sec-sub">No videos to watch, no homework. Scripts, templates, and a routine you can implement today.</p>
+    <div class="inside-grid">
+      <div class="ig-card"><span class="ig-icon">✉️</span>
+        <div class="ig-title">Outreach Vault</div>
+        <div class="ig-desc">50+ scripts for Instagram DM, LinkedIn, and cold email. Personalise in 2 minutes and send.
+        </div>
+      </div>
+      <div class="ig-card"><span class="ig-icon">🔄</span>
+        <div class="ig-title">Follow-Up System</div>
+        <div class="ig-desc">Complete sequence - Day 3, Day 7, Day 14 - including the breakup message that gets the
+          highest reply rate.</div>
+      </div>
+      <div class="ig-card"><span class="ig-icon">📋</span>
+        <div class="ig-title">Proposal Template</div>
+        <div class="ig-desc">Fill-in-the-blanks proposal with ROI framing. The exact format used to close high-ticket
+          clients.</div>
+      </div>
+      <div class="ig-card"><span class="ig-icon">📅</span>
+        <div class="ig-title">7-Day Challenge</div>
+        <div class="ig-desc">Day-by-day plan from zero to first client conversation. Specific tasks and targets for each
+          day.</div>
+      </div>
+      <div class="ig-card"><span class="ig-icon">🤖</span>
+        <div class="ig-title">AI Prompt Library</div>
+        <div class="ig-desc">50+ prompts for outreach, content, proposals, and client work. Built for ChatGPT and
+          Claude.</div>
+      </div>
+      <div class="ig-card"><span class="ig-icon">📊</span>
+        <div class="ig-title">Lead Tracker</div>
+        <div class="ig-desc">Notion database to manage your full pipeline - from first outreach to closed deal.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="div"></div>
+
+  <!-- HOW IT WORKS -->
+  <div class="section">
+    <div class="sec-eyebrow">How it works</div>
+    <div class="sec-title">Simple by <em>design.</em></div>
+    <div class="how-grid">
+      <div class="how-step">
+        <div class="how-num">01</div><span class="how-icon">💳</span>
+        <div class="how-title">Pay once</div>
+        <div class="how-desc">₹999 one-time. No subscription. UPI, card, net banking all accepted.</div>
+      </div>
+      <div class="how-step">
+        <div class="how-num">02</div><span class="how-icon">⚡</span>
+        <div class="how-title">Instant access</div>
+        <div class="how-desc">Notion workspace link delivered immediately after payment.</div>
+      </div>
+      <div class="how-step">
+        <div class="how-num">03</div><span class="how-icon">📋</span>
+        <div class="how-title">Follow the system</div>
+        <div class="how-desc">Start the 7-day challenge. Use the scripts. Follow the daily routine.</div>
+      </div>
+      <div class="how-step">
+        <div class="how-num">04</div><span class="how-icon">🎯</span>
+        <div class="how-title">Get clients</div>
+        <div class="how-desc">Send outreach, follow up, close. The system works when you work it.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="div"></div>
+
+  <!-- OUR PROMISE -->
+  <div class="section">
+    <div class="sec-eyebrow">Our promise</div>
+    <div class="sec-title">We earn your <em>trust.</em></div>
+    <p class="sec-sub">We're new. So instead of fake proof, here's what we actually commit to.</p>
+    <div class="promise-grid">
+      <div class="pg">
+        <div class="pg-icon">💯</div>
+        <div class="pg-title">Real experience, not theory</div>
+        <div class="pg-desc">Every script is something Akhil uses himself in the Kerala and UAE market.</div>
+      </div>
+      <div class="pg">
+        <div class="pg-icon">📩</div>
+        <div class="pg-title">Direct founder support</div>
+        <div class="pg-desc">Message us on WhatsApp and Akhil personally responds - not a support team.</div>
+      </div>
+      <div class="pg">
+        <div class="pg-icon">🔄</div>
+        <div class="pg-title">Free lifetime updates</div>
+        <div class="pg-desc">Buy once, get every future improvement free. No upgrade fees, ever.</div>
+      </div>
+      <div class="pg">
+        <div class="pg-icon">🙏</div>
+        <div class="pg-title">You shape what we build</div>
+        <div class="pg-desc">Early customers get a say in our next products. Your feedback becomes our roadmap.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="div"></div>
+
+  <!-- BLOG -->
+  <div class="section" id="blog">
+    <div class="sec-eyebrow">Free resources</div>
+    <div class="sec-title">Learn. Implement. <em>Win.</em></div>
+    <div class="blog-grid">
+      <div class="bc">
+        <div class="bc-img">✉️</div>
+        <div class="bc-body">
+          <div class="bc-cat">Outreach</div>
+          <div class="bc-title">The 3-line DM that gets 10x more replies</div>
+          <div class="bc-meta">8 min · Free</div>
+        </div>
+      </div>
+      <div class="bc">
+        <div class="bc-img">💰</div>
+        <div class="bc-body">
+          <div class="bc-cat">Pricing</div>
+          <div class="bc-title">How to charge ₹15,000/month as a beginner</div>
+          <div class="bc-meta">6 min · Free</div>
+        </div>
+      </div>
+      <div class="bc">
+        <div class="bc-img">🤖</div>
+        <div class="bc-body">
+          <div class="bc-cat">AI Tools</div>
+          <div class="bc-title">5 ChatGPT prompts that automate 80% of your work</div>
+          <div class="bc-meta">10 min · Free</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NEWSLETTER -->
+  <div class="nl-wrap" id="newsletter">
+    <div class="nl-box">
+      <div>
+        <div class="sec-eyebrow">Newsletter</div>
+        <div class="nl-title">The ScaleCraft <em>Weekly.</em></div>
+        <p class="nl-desc">One actionable insight every Thursday - outreach tips, AI tools, pricing advice. Written by
+          Akhil from real experience. Always free.</p>
+      </div>
+      <div class="nl-form">
+        <input class="nl-inp" type="text" placeholder="Your name">
+        <input class="nl-inp" type="email" placeholder="your@email.com">
+        <button class="nl-btn">Subscribe Free →</button>
+        <p class="nl-small">No spam. Unsubscribe anytime.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <div class="faq-wrap" id="faq">
+    <div>
+      <div class="sec-eyebrow">FAQ</div>
+      <div class="sec-title">Honest answers<br>to real <em>questions.</em></div>
+      <p style="font-size:14px;color:var(--mid);margin-top:12px;line-height:1.7;max-width:260px;">Still unsure? Message
+        Akhil directly on WhatsApp for an honest answer.</p>
+      <button class="btn-dark" style="margin-top:20px;">Chat on WhatsApp →</button>
+    </div>
+    <div class="faq-list" id="faq-list"></div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer-wrap">
+    <div class="footer-inner">
+      <div>
+        <div class="f-logo-row">
+          <div class="f-mark"><svg viewBox="0 0 12 12" fill="none">
+              <path d="M1 9L4 4L7 6L11 2" stroke="white" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
+            </svg></div>
+          ScaleCraft
+        </div>
+        <p class="f-tagline">AI systems for Indian freelancers. Built from 5 years of real experience.</p>
+        <p class="f-founder">Founded by Akhil · Kerala, India 🇮🇳</p>
+      </div>
+      <div class="f-col">
+        <h4>Products</h4>
+        <a href="#">AI Client Acquisition</a>
+        <a href="#">WhatsApp Blueprint</a>
+        <a href="#">Google Maps Kit</a>
+      </div>
+      <div class="f-col">
+        <h4>Resources</h4>
+        <a href="#">Blog</a>
+        <a href="#">Newsletter</a>
+        <a href="#">Free Templates</a>
+      </div>
+      <div class="f-col">
+        <h4>Company</h4>
+        <a href="#">About</a>
+        <a href="#">Contact</a>
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span class="fb">© 2026 ScaleCraft · growyourbusiness.today</span>
+      <span class="fb">Made with ❤️ in Kerala</span>
+    </div>
+  </div>
+
+  <script>
+    const faqs = [
+      { q: "You're new - should I trust this?", a: "Fair question. ScaleCraft is new as a brand but the experience behind it isn't. Akhil has 5 years of real IT Industry and client acquisition experience in Kerala and UAE. Every script and template is something he uses himself - not theory from a YouTube video. We'd rather earn your trust with honest work than fake it with inflated numbers." },
+      { q: "Will this work if I'm a complete beginner?", a: "Yes. The 7-day challenge is built specifically for people who have never landed a client. It walks you through exactly what to do each day - who to contact, what to say, how to follow up. No prior experience needed." },
+      { q: "Do I need a paid ChatGPT subscription?", a: "No. All prompts work on the free version of ChatGPT and Claude. The paid version gives slightly better results but is completely optional." },
+      { q: "Is this only for Kerala freelancers?", a: "No - the system works for any freelancer in India or UAE. The scripts are written to work across markets. We have specific knowledge of Kerala and UAE business culture built in, but it's relevant beyond those locations." },
+      { q: "What if it doesn't work for me?", a: "Message Akhil directly on WhatsApp. As an early customer you get direct founder support - not a ticket system. If something isn't working for your situation, he'll personally help you figure out why." },
+      { q: "How do I access the product after paying?", a: "Immediately after payment you receive a link to the Notion workspace. Duplicate it to your own free Notion account and you have lifetime access. No app to download, no account to create." }
+    ];
+
+    document.getElementById('faq-list').innerHTML = faqs.map((f, i) => `
+  <div class="faq-item" id="fi${i}">
+    <div class="faq-q" onclick="tog(${i})">${f.q}<span class="faq-arr">▼</span></div>
+    <div class="faq-a">${f.a}</div>
+  </div>`).join('');
+
+    function tog(i) {
+      const el = document.getElementById('fi' + i);
+      const was = el.classList.contains('open');
+      document.querySelectorAll('.faq-item').forEach(e => e.classList.remove('open'));
+      if (!was) el.classList.add('open');
+    }
+  </script>
+</body>
+
+</html>
