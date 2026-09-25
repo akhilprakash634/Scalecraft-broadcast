@@ -147,11 +147,7 @@ export async function GET() {
             : `${clientRecord.whatsappAccessToken.slice(0, 7)}...${clientRecord.whatsappAccessToken.slice(-4)}`) 
         : null,
       whatsappWabaId: clientRecord.whatsappWabaId || null,
-      whatsappVerifyToken: clientRecord.whatsappVerifyToken 
-        ? (clientRecord.whatsappVerifyToken.length <= 11 
-            ? '***' 
-            : `${clientRecord.whatsappVerifyToken.slice(0, 7)}...${clientRecord.whatsappVerifyToken.slice(-4)}`) 
-        : null,
+      whatsappVerifyToken: clientRecord.whatsappVerifyToken || null,
       intendedConnectionType: clientRecord.intendedConnectionType || null,
       metaLimitTier,
       metaQualityRating,
