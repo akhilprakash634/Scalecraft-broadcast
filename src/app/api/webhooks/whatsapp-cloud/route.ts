@@ -57,18 +57,12 @@ export async function POST(request: Request) {
     if (phoneNumberId) {
       const { data } = await supabaseAdmin
         .from('agent_clients')
-        .select('id, whatsapp_access_token, type_specific_data')
+        .select('id, whatsapp_access_token')
         .eq('whatsapp_phone_number_id', phoneNumberId)
         .single();
       if (data) {
         clientId = data.id;
         whatsappToken = data.whatsapp_access_token;
-        if (!whatsappToken && data.type_specific_data) {
-          try {
-             const tsd = JSON.parse(data.type_specific_data);
-             whatsappToken = tsd.whatsapp_access_token || '';
-          } catch {}
-        }
       }
     }
 
