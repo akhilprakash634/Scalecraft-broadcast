@@ -11,35 +11,25 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const clientIds = Array.from(new Set([client.clientId, client.id, client._id].filter(Boolean)));
+    const clientId = client.clientId || client.id || client._id;
 
-    // 1. Total Contacts (leads_cache + contacts)
+    // 1. Total Contacts (whatsapp_contacts)
     const { count: contactsCount } = await supabaseAdmin
-      .from('contacts')
+      .from('whatsapp_contacts')
       .select('*', { count: 'exact', head: true })
-      .in('client_id', clientIds);
+      .eq('business_id', clientId);
 
-    const { count: leadsCount } = await supabaseAdmin
-      .from('leads_cache')
+    const totalContacts = contactsCount || 0;
+
+    // 2. Total Broadcasts (whatsapp_campaigns)
+    const { count: campaignsCount } = await supabaseAdmin
+      .from('whatsapp_campaigns')
       .select('*', { count: 'exact', head: true })
-      .in('client_id', clientIds);
+      .eq('business_id', clientId);
 
-    const totalContacts = (contactsCount || 0) + (leadsCount || 0);
+    const totalBroadcasts = campaignsCount || 0;
 
-    // 2. Total Broadcasts
-    const { count: regularCount } = await supabaseAdmin
-      .from('broadcast_audit')
-      .select('*', { count: 'exact', head: true })
-      .in('client_id', clientIds);
-
-    const { count: coldCount } = await supabaseAdmin
-      .from('broadcast_jobs')
-      .select('*', { count: 'exact', head: true })
-      .in('client_id', clientIds);
-
-    const totalBroadcasts = (regularCount || 0) + (coldCount || 0);
-
-    // 3. Stats from broadcast_recipient_logs
+    // 3. Stats from whatsapp_campaign_recipients
     let sent = 0, delivered = 0, read = 0, failed = 0;
     
     // Using simple pagination to avoid memory limit on very large datasets
@@ -49,9 +39,9 @@ export async function GET() {
 
     while (hasMore) {
       const { data: logs, error } = await supabaseAdmin
-        .from('broadcast_recipient_logs')
-        .select('status')
-        .in('client_id', clientIds)
+        .from('whatsapp_campaign_recipients')
+        .select('status, whatsapp_campaigns!inner(business_id)')
+        .eq('whatsapp_campaigns.business_id', clientId)
         .range(page * limit, (page + 1) * limit - 1);
 
       if (error || !logs || logs.length === 0) {
@@ -81,13 +71,14 @@ export async function GET() {
       }
     }
 
-    // 4. Replies (sum of user_messages from leads)
-    const { data: leadsData } = await supabaseAdmin
-      .from('leads_cache')
-      .select('user_messages')
-      .in('client_id', clientIds);
+    // 4. Replies (count incoming messages in whatsapp_messages)
+    const { count: repliesCount } = await supabaseAdmin
+      .from('whatsapp_messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('business_id', clientId)
+      .eq('direction', 'incoming');
 
-    const replies = (leadsData || []).reduce((sum, lead) => sum + (lead.user_messages || 0), 0);
+    const replies = repliesCount || 0;
 
     // 5. Connection Status
     let whatsappStatus = 'Not Connected';
@@ -95,19 +86,27 @@ export async function GET() {
       whatsappStatus = 'Connected';
     }
 
-    // 6. Recent Conversations (from leads_cache)
-    const { data: recentLeads } = await supabaseAdmin
-      .from('leads_cache')
-      .select('name, phone, summary, last_message_at')
-      .in('client_id', clientIds)
+    // 6. Recent Conversations (from whatsapp_conversations)
+    const { data: recentConvs } = await supabaseAdmin
+      .from('whatsapp_conversations')
+      .select('whatsapp_contacts(name, phone), last_message_at, unread_count')
+      .eq('business_id', clientId)
       .order('last_message_at', { ascending: false })
       .limit(5);
 
-    const recentConversations = (recentLeads || []).map(lead => ({
-      customer: lead.name && /[a-zA-Z]/.test(lead.name) ? lead.name : lead.phone,
-      lastMessage: lead.summary ? lead.summary.substring(0, 50) + (lead.summary.length > 50 ? '...' : '') : 'Active conversation',
-      time: lead.last_message_at
-    }));
+    const recentConversations = (recentConvs || []).map(conv => {
+      const contact = Array.isArray(conv.whatsapp_contacts) ? conv.whatsapp_contacts[0] : conv.whatsapp_contacts;
+      let customerName = contact?.phone || 'Unknown';
+      if (contact?.name && /[a-zA-Z]/.test(contact.name)) {
+        customerName = contact.name;
+      }
+
+      return {
+        customer: customerName,
+        lastMessage: conv.unread_count > 0 ? `${conv.unread_count} unread messages` : 'Active conversation',
+        time: conv.last_message_at
+      };
+    });
 
     return NextResponse.json({
       stats: {

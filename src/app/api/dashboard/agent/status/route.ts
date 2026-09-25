@@ -125,12 +125,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
 
-    const serverIP = getClientServerIp(client);
-    const { sshPrivateKey, serverUser } = client;
-    if (!serverIP || !sshPrivateKey) {
-      return NextResponse.json({ error: 'Server details missing' }, { status: 400 });
-    }
-
     if (action === 'configure_cloud_api') {
       const rawPhoneId = body.whatsappPhoneNumberId || '';
       const rawAccessToken = body.whatsappAccessToken || '';
@@ -141,7 +135,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'All parameters (Phone ID, Access Token, WABA ID, and App Secret) are required.' }, { status: 400 });
       }
 
-      // Sanitize inputs to prevent command injection or here-doc breakouts
+      // Sanitize inputs
       const sanitizeVal = (val: string) => val.replace(/[^a-zA-Z0-9_\-\.\=\/]/g, '');
       const whatsappPhoneNumberId = sanitizeVal(rawPhoneId);
       const whatsappAccessToken = sanitizeVal(rawAccessToken);
@@ -160,39 +154,6 @@ export async function POST(request: Request) {
       }
 
       const profileName = dbClient.hermes_profile || dbClient.id;
-      const finalGeminiApiKey = dbClient.gemini_api_key;
-      const sharedServerUser = dbClient.server_user || 'ubuntu';
-
-      const envContent = `WHATSAPP_CLOUD_PHONE_NUMBER_ID="${whatsappPhoneNumberId}"
-WHATSAPP_CLOUD_ACCESS_TOKEN="${whatsappAccessToken}"
-WHATSAPP_CLOUD_APP_SECRET="${whatsappAppSecret}"
-WHATSAPP_CLOUD_ALLOW_ALL_USERS=true
-GATEWAY_ALLOW_ALL_USERS=true
-WHATSAPP_CLOUD_HOME_CHANNEL=${dbClient.whatsapp_bot_number}@s.whatsapp.net
-WHATSAPP_CLOUD_VERIFY_TOKEN=${profileName}-webhook-token
-WHATSAPP_CLOUD_BUSINESS_ACCOUNT_ID="${whatsappWabaId}"
-WHATSAPP_ENABLED=true
-GOOGLE_API_KEY="${finalGeminiApiKey}"
-GEMINI_API_KEY="${finalGeminiApiKey}"
-TZ="Asia/Kolkata"`;
-
-      const envWriteResult = await executeCommand(
-        serverIP,
-        sshPrivateKey,
-        `cat > ~/.hermes/profiles/${profileName}/.env << 'ENV'\n${envContent}\nENV\nchmod 600 ~/.hermes/profiles/${profileName}/.env`,
-        sharedServerUser
-      );
-
-      if (envWriteResult.exitCode !== 0) {
-        return NextResponse.json({ error: `Failed to write config: ${envWriteResult.stderr}` }, { status: 500 });
-      }
-
-      await executeCommand(
-        serverIP,
-        sshPrivateKey,
-        buildHermesCmd(client, 'whatsapp-cloud'),
-        sharedServerUser
-      );
 
       await supabaseAdmin
         .from('agent_clients')
@@ -208,9 +169,13 @@ TZ="Asia/Kolkata"`;
         })
         .eq('id', client.id || client._id);
 
-      await restartAgent(client, sshPrivateKey, sharedServerUser);
+      return NextResponse.json({ success: true, message: 'WhatsApp Cloud API connected successfully!' });
+    }
 
-      return NextResponse.json({ success: true, message: 'WhatsApp Cloud API configured and restarted!' });
+    const serverIP = getClientServerIp(client);
+    const { sshPrivateKey, serverUser } = client;
+    if (!serverIP || !sshPrivateKey) {
+      return NextResponse.json({ error: 'Server details missing' }, { status: 400 });
     }
 
     if (action === 'fix_soul_path') {

@@ -258,6 +258,11 @@ export function mapDbClientToAgentClient(dbClient: any): AgentClient | null {
     }
   }
 
+  let tsd: any = {};
+  if (dbClient.type_specific_data) {
+    try { tsd = JSON.parse(dbClient.type_specific_data); } catch {}
+  }
+
   return {
     id: dbClient.id,
     _id: dbClient.id,
@@ -343,18 +348,18 @@ export function mapDbClientToAgentClient(dbClient: any): AgentClient | null {
     competitors: dbClient.competitors || '',
     hermesProfile: dbClient.hermes_profile || null,
     sharedServerIp: dbClient.shared_server_ip || null,
-    connectionType: dbClient.connection_type || 'baileys',
-    whatsappPhoneNumberId: dbClient.whatsapp_phone_number_id || null,
-    whatsappAccessToken: dbClient.whatsapp_access_token || null,
-    whatsappAppSecret: dbClient.whatsapp_app_secret || null,
-    whatsappWabaId: dbClient.whatsapp_waba_id || null,
-    whatsappVerifyToken: dbClient.whatsapp_verify_token || null,
-    intendedConnectionType: dbClient.intended_connection_type || null,
+    connectionType: 'cloud_api',
+    whatsappPhoneNumberId: dbClient.whatsapp_phone_number_id || tsd.whatsapp_phone_number_id || null,
+    whatsappAccessToken: dbClient.whatsapp_access_token || tsd.whatsapp_access_token || null,
+    whatsappAppSecret: dbClient.whatsapp_app_secret || tsd.whatsapp_app_secret || null,
+    whatsappWabaId: dbClient.whatsapp_waba_id || tsd.whatsapp_waba_id || null,
+    whatsappVerifyToken: dbClient.whatsapp_verify_token || tsd.whatsapp_verify_token || null,
+    intendedConnectionType: dbClient.intended_connection_type || tsd.intended_connection_type || null,
     heartbeat_token: dbClient.heartbeat_token || null,
     heartbeatToken: dbClient.heartbeat_token || null,
-    metaLimitTier: dbClient.meta_limit_tier || null,
-    metaQualityRating: dbClient.meta_quality_rating || null,
-    metaLimitExpiresAt: dbClient.meta_limit_expires_at || null,
+    metaLimitTier: dbClient.meta_limit_tier || tsd.meta_limit_tier || null,
+    metaQualityRating: dbClient.meta_quality_rating || tsd.meta_quality_rating || null,
+    metaLimitExpiresAt: dbClient.meta_limit_expires_at || tsd.meta_limit_expires_at || null,
     metaThroughputLimit: dbClient.meta_throughput_limit || 80,
     dailyBroadcastLimit: dbClient.daily_broadcast_limit ?? null,
     // Billing

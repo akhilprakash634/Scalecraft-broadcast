@@ -71,10 +71,11 @@ export async function GET() {
     const clientIds = Array.from(new Set([client.clientId, client.id, client._id].filter(Boolean)));
 
     const { data: sentLogs } = await supabaseAdmin
-      .from('broadcast_recipient_logs')
-      .select('phone')
-      .in('client_id', clientIds)
-      .gte('sent_at', startOfDay.toISOString());
+      .from('whatsapp_campaign_recipients')
+      .select('phone, whatsapp_campaigns!inner(business_id)')
+      .in('whatsapp_campaigns.business_id', clientIds)
+      .eq('status', 'sent')
+      .gte('updated_at', startOfDay.toISOString());
 
     const totalSentToday = new Set((sentLogs || []).map((x) => x.phone)).size;
 

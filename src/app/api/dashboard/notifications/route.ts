@@ -9,18 +9,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data, error } = await supabaseAdmin
-      .from('notifications')
-      .select('*')
-      .eq('client_id', clientRecord._id)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Fetch notifications error:', error.message);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json(data || []);
+    return NextResponse.json([]);
   } catch (error: any) {
     console.error('Notifications GET Error:', error.message);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -34,15 +23,7 @@ export async function POST() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { error } = await supabaseAdmin
-      .from('notifications')
-      .update({ read: true })
-      .eq('client_id', clientRecord._id);
-
-    if (error) {
-      console.error('Mark read notifications error:', error.message);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+    // No-op since notifications table is removed
 
     return NextResponse.json({ success: true, message: 'All notifications marked as read' });
   } catch (error: any) {

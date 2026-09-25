@@ -2376,18 +2376,12 @@ export async function sendCloudApiBroadcast(
             });
           }
 
-          // Asynchronously write to Inbox/conversation history (VPS) and update leads_cache (Supabase)
-          if (serverIP && sshPrivateKey) {
-            const profile = hermesProfile || '';
-            const profilePrefix = profile ? `profiles/${profile}/` : '';
-            
-            // Format message content with media prefix if there is a header image
+          // Asynchronously write to Inbox/conversation history (Supabase CRM)
+          if (clientId && supabaseUrl && supabaseKey) {
             let finalLoggedContent = loggedMessageContent.trim();
             if (imageUrl) {
-              finalLoggedContent = `[media:image:${imageUrl}]${finalLoggedContent}`;
+              finalLoggedContent = `[media:image:${imageUrl}] ${finalLoggedContent}`;
             }
-            
-            // Append footer and buttons markers if templateComponents is provided
             if (templateComponents) {
               const footerComp = templateComponents.find((c: any) => c.type === 'FOOTER');
               if (footerComp && footerComp.text) {
@@ -2396,175 +2390,49 @@ export async function sendCloudApiBroadcast(
               const buttonsComp = templateComponents.find((c: any) => c.type === 'BUTTONS');
               if (buttonsComp && buttonsComp.buttons) {
                 buttonsComp.buttons.forEach((btn: any) => {
-                  if (btn.text) {
-                    finalLoggedContent += `\n[button:${btn.text.trim()}]`;
-                  }
+                  if (btn.text) finalLoggedContent += `\n[button:${btn.text.trim()}]`;
                 });
               }
             }
-            const base64Msg = Buffer.from(finalLoggedContent).toString('base64');
-            
-            const logMsgScript = `python3 -c '
-import sys, sqlite3, json, os, time, datetime, base64, uuid
-phone = sys.argv[1]
-msg = base64.b64decode(sys.argv[2]).decode("utf-8")
-sessions_file = os.path.expanduser("~/.hermes/${profilePrefix}sessions/sessions.json")
 
-profile = "${profile}"
-if profile:
-    db_path = f"/home/ubuntu/.hermes/profiles/{profile}/state.db"
-else:
-    db_path = "/home/ubuntu/.hermes/state.db"
-
-phone_clean = phone.replace("+", "").split(":")[0].split("@", 1)[0]
-sid = None
-sessions = {}
-
-if os.path.exists(sessions_file):
-    try:
-        with open(sessions_file) as f:
-            sessions = json.load(f)
-        def find_session_id(sessions, target_phone):
-            target_clean = target_phone.replace("+", "").split(":")[0].split("@", 1)[0]
-            for key, val in sessions.items():
-                key_lower = key.lower()
-                if "whatsapp" not in key_lower and "whatsapp_cloud" not in key_lower:
-                    continue
-                k_phone = key.split(":")[-1] if ":" in key else ""
-                if k_phone == target_clean:
-                    sid_val = val.get("session_id") if isinstance(val, dict) else val
-                    if sid_val:
-                        return sid_val
-            return None
-        sid = find_session_id(sessions, phone)
-    except:
-        pass
-
-if not sid and os.path.exists(db_path):
-    try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT s.id, s.session_key
-            FROM sessions s  
-            WHERE (s.session_key LIKE ? OR s.session_key LIKE ?)
-            ORDER BY s.id DESC
-            LIMIT 1
-        """, (
-            f"%whatsapp_cloud%dm%{phone_clean}%",
-            f"%whatsapp%dm%{phone_clean}%"
-        ))
-        row = cursor.fetchone()
-        if row:
-            sid = row[0]
-        conn.close()
-    except Exception as e:
-        pass
-
-# If no session ID found, create a new session record dynamically
-if not sid:
-    try:
-        hex_part = uuid.uuid4().hex[:8]
-        sid = datetime.datetime.utcnow().strftime("%Y%m%d_%H%M%S_") + hex_part
-        now_ts = time.time()
-        iso_ts = datetime.datetime.fromtimestamp(now_ts, datetime.timezone.utc).isoformat().replace("+00:00", "Z")
-        
-        session_key = f"agent:main:whatsapp_cloud:dm:{phone_clean}"
-        sessions[session_key] = {
-            "session_key": session_key,
-            "session_id": sid,
-            "created_at": iso_ts,
-            "updated_at": iso_ts,
-            "display_name": phone,
-            "platform": "whatsapp_cloud",
-            "chat_type": "dm",
-            "origin": {
-                "platform": "whatsapp_cloud",
-                "chat_id": f"{phone}@s.whatsapp.net",
-                "chat_name": phone,
-                "chat_type": "dm",
-                "user_id": f"{phone}@s.whatsapp.net",
-                "user_name": phone
-            }
-        }
-        
-        # Ensure sessions directory exists
-        session_dir = os.path.dirname(sessions_file)
-        if session_dir and not os.path.exists(session_dir):
-            os.makedirs(session_dir, exist_ok=True)
-            
-        with open(sessions_file, "w", encoding="utf-8") as f:
-            json.dump(sessions, f, indent=2)
-    except Exception as e:
-        print("CREATE_SESSION_JSON_ERR:", e)
-        
-    if os.path.exists(db_path):
-        try:
-            conn = sqlite3.connect(db_path)
-            # Try inserting with session_key first
-            try:
-                conn.execute(
-                    "INSERT INTO sessions (id, session_key, source, started_at, message_count, archived) VALUES (?, ?, ?, ?, ?, ?)",
-                    (sid, session_key, "whatsapp_cloud", now_ts, 1, 0)
-                )
-            except Exception:
-                try:
-                    conn.execute(
-                        "INSERT INTO sessions (id, source, started_at, message_count, archived) VALUES (?, ?, ?, ?, ?)",
-                        (sid, "whatsapp_cloud", now_ts, 1, 0)
-                    )
-                except Exception as e2:
-                    print("CREATE_SESSION_DB_ERR:", e2)
-            conn.commit()
-            conn.close()
-        except Exception as e:
-            print("CREATE_SESSION_CONN_ERR:", e)
-
-# Now log the message to state.db database
-if sid and os.path.exists(db_path):
-    try:
-        conn = sqlite3.connect(db_path)
-        try:
-            conn.execute("INSERT INTO messages (session_id, role, content, timestamp, observed, active) VALUES (?, ?, ?, ?, ?, ?)", (sid, "assistant", msg, time.time(), 1, 1))
-        except Exception:
-            try:
-                conn.execute("INSERT INTO messages (session_id, role, content, timestamp) VALUES (?, ?, ?, ?)", (sid, "assistant", msg, time.time()))
-            except Exception as e2:
-                print("DB_INSERT_ERR:", e2)
-        conn.commit()
-        conn.close()
-    except Exception as e:
-        print("DB_LOG_ERR:", e)
-' "${cleanPhone}" "${base64Msg}"`;
-            console.log('[Broadcast->Inbox] Writing message for', cleanPhone, 'to VPS server', serverIP, 'with profile', profile);
-            executeCommand(serverIP, sshPrivateKey, logMsgScript, serverUser || 'ubuntu')
-              .then(res => {
-                if (res.exitCode !== 0) {
-                  console.error('[Broadcast->Inbox] VPS log message script failed for', cleanPhone, 'Exit code:', res.exitCode);
-                  console.error('[Broadcast->Inbox] STDERR:', res.stderr);
-                  console.error('[Broadcast->Inbox] STDOUT:', res.stdout);
-                } else {
-                  console.log('[Broadcast->Inbox] VPS log message script succeeded for', cleanPhone);
-                  console.log('[Broadcast->Inbox] STDOUT:', res.stdout);
-                }
-              })
-              .catch(err => console.error('[Broadcast->Inbox] VPS log message error for', cleanPhone, ':', err.message));
+            fetch(
+              `${supabaseUrl}/rest/v1/messages`,
+              {
+                method: 'POST',
+                headers: {
+                  'apikey': supabaseKey,
+                  'Authorization': `Bearer ${supabaseKey}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  client_id: clientId,
+                  lead_id: cleanPhone,
+                  role: 'assistant',
+                  content: finalLoggedContent,
+                  source: 'whatsapp'
+                }),
+              }
+            ).catch(err => console.error('[CloudBroadcast] Failed to log outbound message to CRM inbox:', err.message));
           }
 
           // Update leads_cache last_message_at and updated_at in Supabase
           if (clientId && supabaseUrl && supabaseKey) {
             const nowIso = new Date().toISOString();
             fetch(
-              `${supabaseUrl}/rest/v1/leads_cache?client_id=eq.${clientId}&phone=eq.${cleanPhone}`,
+              `${supabaseUrl}/rest/v1/leads_cache`,
               {
-                method: 'PATCH',
+                method: 'POST',
                 headers: {
                   'apikey': supabaseKey,
                   'Authorization': `Bearer ${supabaseKey}`,
                   'Content-Type': 'application/json',
-                  'Prefer': 'return=minimal',
+                  'Prefer': 'resolution=merge-duplicates',
                 },
                 body: JSON.stringify({
+                  client_id: clientId,
+                  phone: cleanPhone,
+                  name: cleanPhone,
+                  status: 'hot',
                   last_message_at: nowIso,
                   updated_at: nowIso,
                 }),

@@ -10,19 +10,12 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 1. Fetch status from Supabase
-    const { data: statusData, error: statusError } = await supabaseAdmin
-      .from('installation_status')
-      .select('*')
-      .eq('client_id', clientRecord._id)
-      .maybeSingle();
+    // installation_status table doesn't exist in standalone CRM
+    const statusData = null;
+    const statusError = null;
 
-    if (statusError) {
-      console.error('Supabase installation_status query error:', statusError.message);
-    }
-
-    const status = statusData?.status || clientRecord.status;
-    const serverIP = statusData?.server_ip || clientRecord.serverIP || '';
+    const status = clientRecord.status || 'active';
+    const serverIP = clientRecord.serverIP || '';
 
     // Load logs directly via SSH or construct fallback logs representing the progress stages
     const logs: string[] = [];
@@ -55,7 +48,7 @@ export async function GET() {
     }
 
     const provisioningLogs = logs;
-    const installedAt = statusData?.installed_at || clientRecord.installedAt || '';
+    const installedAt = clientRecord.installedAt || '';
 
     let antiBotActive = true;
     let autoFollowUpEnabled = true;

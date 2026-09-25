@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSessionClient } from '@/lib/auth';
-import { executeCommand } from '@/lib/ssh';
+import { supabaseAdmin } from '@/lib/supabase';
 
 export async function GET(request: Request) {
   try {
@@ -9,27 +9,48 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { serverIP, sshPrivateKey, serverUser } = client;
-    if (!serverIP || !sshPrivateKey) {
-      return NextResponse.json({ error: 'Server details missing' }, { status: 400 });
+    const { searchParams } = new URL(request.url);
+    const campaignId = searchParams.get('campaignId');
+    const clientId = client.clientId || client.id || client._id;
+    let targetCampaignId = campaignId;
+
+    if (!targetCampaignId) {
+      // Find latest campaign
+      const { data: latest } = await supabaseAdmin
+        .from('whatsapp_campaigns')
+        .select('id')
+        .eq('business_id', clientId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+        
+      if (latest) targetCampaignId = latest.id;
     }
 
-    const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type') || 'regular'; // 'regular' or 'cold'
-    const logFile = type === 'cold' ? '/home/ubuntu/cold_outreach_details.log' : '/home/ubuntu/broadcast_details.log';
+    if (!targetCampaignId) {
+      return new Response('No campaign history found.', { status: 404 });
+    }
 
-    // Get all contents of the campaign details logs
-    const logResult = await executeCommand(
-      serverIP,
-      sshPrivateKey,
-      `cat ${logFile} 2>/dev/null || echo ""`,
-      serverUser || 'ubuntu'
-    );
+    const { data: logs } = await supabaseAdmin
+      .from('whatsapp_campaign_recipients')
+      .select('status, error_message, whatsapp_contacts(phone)')
+      .eq('campaign_id', targetCampaignId)
+      .limit(1000); 
 
-    return new Response(logResult.stdout || '', {
+    if (!logs || logs.length === 0) {
+      return new Response('No logs available for this campaign yet.', { status: 404 });
+    }
+
+    const formattedLogs = logs.map(l => {
+      const contact: any = Array.isArray(l.whatsapp_contacts) ? l.whatsapp_contacts[0] : l.whatsapp_contacts;
+      const phone = contact?.phone || 'Unknown';
+      return `[${new Date().toLocaleTimeString()}] ${phone} - ${l.status.toUpperCase()} ${l.error_message ? `(${l.error_message})` : ''}`;
+    }).join('\n');
+
+    return new Response(formattedLogs, {
       headers: {
         'Content-Type': 'text/plain',
-        'Content-Disposition': `attachment; filename="${type}_broadcast_full_log.txt"`,
+        'Content-Disposition': `attachment; filename="broadcast_full_log.txt"`,
       },
     });
   } catch (error: any) {

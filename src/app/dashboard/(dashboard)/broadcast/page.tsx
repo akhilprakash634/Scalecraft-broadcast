@@ -193,20 +193,7 @@ export default function BroadcastPage() {
 
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const templates = [
-    {
-      name: 'Welcome Offer 🎟️',
-      text: 'Hey! Thanks for connecting. Here is a special 15% discount code just for you: *WELCOME15*. Start scaling today! Reply to this message if you need help. 😊',
-    },
-    {
-      name: 'Follow-up Objections 🏷️',
-      text: 'Hi there! Just checking if you had any other questions about our *WhatsApp Agent*? We currently have a limited-time deal. Let me know if you would like to get started! 🚀',
-    },
-    {
-      name: 'Digital Product Discount 🎁',
-      text: 'Hey! 👋 Just wanted to reach out because you previously enquired about our digital products. We are running a special limited-time 20% discount offer! Use code *OFFER20* at checkout. Let me know if you would like to proceed! 🚀',
-    },
-  ];
+
 
   const fetchCampaignStatus = async () => {
     try {
@@ -1489,12 +1476,11 @@ export default function BroadcastPage() {
                   )}
                 </div>
 
-                {/* Meta approved template select or textarea */}
                 {useAi ? (
                   <div className="bg-brand-light/20 border border-brand/10 rounded-xl p-4 text-[11px] font-semibold text-brand-dark leading-relaxed">
                     AI Copywriter will inspect each client logs history and draft personalized WhatsApp follow-ups automatically.
                   </div>
-                ) : (client?.connectionType === 'cloud_api' || (client?.whatsappAccessToken && (client?.whatsappWabaId || client?.whatsappPhoneNumberId))) ? (
+                ) : (
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-2">
@@ -1634,38 +1620,6 @@ export default function BroadcastPage() {
                         </p>
                       </div>
                     )}
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="space-y-1.5">
-                      <span className="block text-[10px] font-black text-text-muted uppercase tracking-wider">Templates</span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {templates.map((tpl) => (
-                          <button
-                            key={tpl.name}
-                            type="button"
-                            onClick={() => handleApplyTemplate(tpl.text)}
-                            className="bg-surface-2 hover:bg-border text-xs font-semibold px-3 py-1 rounded-full cursor-pointer text-text-secondary transition-colors"
-                          >
-                            {tpl.name}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label htmlFor="broadcast-msg" className="block text-[10px] font-black text-text-muted uppercase tracking-wider">
-                        Broadcast Message Text
-                      </label>
-                      <textarea
-                        id="broadcast-msg"
-                        rows={5}
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        placeholder="Write message text here..."
-                        className="w-full text-xs border border-border bg-white dark:bg-surface-0 rounded-lg p-2.5 outline-none font-semibold text-text-primary focus:border-brand"
-                      />
-                    </div>
                   </div>
                 )}
 
@@ -2034,7 +1988,6 @@ export default function BroadcastPage() {
 
               {/* Message setup */}
               <div className="space-y-4 pt-2 border-t border-border">
-                {client?.connectionType === 'cloud_api' ? (
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-2">
@@ -2209,53 +2162,6 @@ export default function BroadcastPage() {
                       </div>
                     )}
                   </div>
-                ) : (
-                  <>
-                    <div className="flex justify-between items-center">
-                      <span className="block text-[10px] font-black text-text-muted uppercase tracking-wider">Outreach Message Text</span>
-                      <div className="flex items-center gap-1.5 text-xs font-semibold uppercase text-text-secondary">
-                        <span>Multiple templates (split-testing)</span>
-                        <button
-                          type="button"
-                          onClick={() => setUseMultipleTemplates(!useMultipleTemplates)}
-                          className={`w-9 h-5 rounded-full p-0.5 transition-colors cursor-pointer flex items-center ${
-                            useMultipleTemplates ? 'bg-brand justify-end' : 'bg-border justify-start'
-                          }`}
-                        >
-                          <span className="w-4 h-4 rounded-full bg-white block shadow-xs" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {useMultipleTemplates ? (
-                      <div className="space-y-3 pt-1.5">
-                        {coldTemplates.map((tplText, idx) => (
-                          <div key={idx} className="flex gap-2 items-start animate-fadeIn">
-                            <textarea
-                              rows={2}
-                              value={tplText}
-                              onChange={(e) => handleTemplateTextChange(idx, e.target.value)}
-                              placeholder={`Template #${idx + 1}...`}
-                              className="flex-1 text-xs border border-border bg-white rounded-lg p-2 outline-none font-semibold text-text-primary"
-                            />
-                            <button type="button" onClick={() => handleRemoveTemplateField(idx)} className="p-2 hover:bg-danger-bg text-text-subtle hover:text-danger rounded-lg transition-colors cursor-pointer">
-                              <Trash2 size={15} />
-                            </button>
-                          </div>
-                        ))}
-                        <Button variant="outline" size="sm" onClick={handleAddTemplateField} icon={<Plus size={13} />}>Add template variation</Button>
-                      </div>
-                    ) : (
-                      <textarea
-                        rows={4}
-                        value={coldMessage}
-                        onChange={(e) => setColdMessage(e.target.value)}
-                        placeholder="Enter outreach template text here... Use {business_name} variable for personalization."
-                        className="w-full text-xs border border-border bg-white dark:bg-surface-0 rounded-lg p-2.5 outline-none font-semibold text-text-primary focus:border-brand"
-                      />
-                    )}
-                  </>
-                )}
               </div>
 
               {/* Settings sliders */}
@@ -2323,7 +2229,6 @@ export default function BroadcastPage() {
               <div className="bg-[#EFEAE2] dark:bg-[#0B141A] min-h-[220px] p-4 flex flex-col justify-end">
                 
                 {(() => {
-                  if (client?.connectionType === 'cloud_api') {
                     const { headerImageUrl, headerText, previewBody, footerText } = getTemplatePreviewData(
                       coldSelectedMetaTemplate,
                       coldTemplateVarMapping,
@@ -2367,22 +2272,6 @@ export default function BroadcastPage() {
                         </div>
                       </div>
                     );
-                  } else {
-                    return (
-                      <div className="flex justify-end mb-1">
-                        <div className="relative bg-chat-outgoing text-text-primary max-w-[85%] rounded-[8px_0_8px_8px] px-3.5 py-2.5 shadow-xs text-xs font-sans">
-                          <p className="whitespace-pre-wrap leading-relaxed">
-                            {useMultipleTemplates
-                              ? interpolatePreviewText(coldTemplates[0], { business_name: 'Example Business' })
-                              : interpolatePreviewText(coldMessage, { business_name: 'Example Business' }) || 'Type outreach message text...'}
-                          </p>
-                          <div className="text-[9px] text-[#667781] text-right mt-1.5">
-                            <span>9:41 am</span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  }
                 })()}
 
               </div>

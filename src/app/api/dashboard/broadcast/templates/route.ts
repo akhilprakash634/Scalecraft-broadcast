@@ -151,18 +151,7 @@ export async function GET(request: Request) {
       }
     }
 
-    // Self-heal connectionType to cloud_api if templates were successfully fetched but DB is stuck at 'baileys'
-    if (fetchSucceeded && templates.length > 0 && client.connectionType !== 'cloud_api') {
-      try {
-        logDebug('[Templates] Self-healing client connection_type to cloud_api...');
-        await supabaseAdmin
-          .from('agent_clients')
-          .update({ connection_type: 'cloud_api' })
-          .eq('id', client.id || client._id);
-      } catch (err: any) {
-        logDebug('[Templates] Self-healing connectionType failed:', err.message);
-      }
-    }
+    // No connection_type self-healing because column is missing
 
     // Show ALL templates except REJECTED
     // (show PENDING so client knows approval status)

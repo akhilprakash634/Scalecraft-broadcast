@@ -1,12 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-
-const HERMES_PORT = 8090;
-
-function getSharedServerUrl(): string {
-  const ip = process.env.SHARED_SERVER_IP || '13.206.143.171';
-  return `http://${ip}:${HERMES_PORT}`;
-}
+import crypto from 'crypto';
 
 // GET — Meta calls this to verify the webhook
 export async function GET(request: Request) {
@@ -20,313 +14,242 @@ export async function GET(request: Request) {
       // Check if token matches any registered client
       const { data } = await supabaseAdmin
         .from('agent_clients')
-        .select('id, hermes_profile')
+        .select('id')
         .eq('whatsapp_verify_token', token)
         .maybeSingle();
 
       if (data) {
-        // Valid token — respond directly with the challenge
         return new Response(challenge, {
           status: 200,
           headers: { 'Content-Type': 'text/plain' },
         });
       }
     }
-
-    console.error('[WhatsApp Webhook] Verification failed or token mismatch');
     return new Response('Forbidden', { status: 403 });
-
   } catch (error) {
-    console.error('[WhatsApp Webhook] GET error:', error);
     return new Response('Internal Server Error', { status: 500 });
   }
-}
-
-function getPhoneVariants(rawPhone: string): string[] {
-  if (!rawPhone) return [];
-  const digits = rawPhone.replace(/\D/g, '');
-  const variants = new Set<string>();
-  if (digits) {
-    variants.add(digits);
-    variants.add('+' + digits);
-    if (digits.length >= 10) {
-      variants.add(digits.slice(-10));
-    }
-  }
-  return Array.from(variants);
 }
 
 // POST — Meta sends incoming messages and status receipts here
 export async function POST(request: Request) {
   try {
     const body = await request.text();
-    console.log('[RAW WEBHOOK]', body);
-    const signature = request.headers.get('x-hub-signature-256') || '';
-    const contentType = request.headers.get('content-type') || 'application/json';
+    const payload = JSON.parse(body);
 
-    const sharedServerIp = process.env.SHARED_SERVER_IP || '13.206.143.171';
-    let port = 8090; // default fallback
+    const eventHash = crypto.createHash('sha256').update(body).digest('hex');
+    
+    // Process idempotency
+    const { data: existingEvent } = await supabaseAdmin
+      .from('whatsapp_webhook_events')
+      .select('id')
+      .eq('event_hash', eventHash)
+      .maybeSingle();
+      
+    if (existingEvent) {
+      return new Response('OK', { status: 200 }); // Already processed
+    }
 
-    try {
-      const payload = JSON.parse(body);
+    const phoneNumberId = payload.entry?.[0]?.changes?.[0]?.value?.metadata?.phone_number_id;
+    let clientId = '';
+    let whatsappToken = '';
 
-      // Log raw payload for debugging Meta status receipt webhooks
-      console.log('[Meta Webhook Incoming POST Payload]:', JSON.stringify(payload));
-
-      // 1. Extract phone_number_id to route webhook to correct client port
-      const phoneNumberId = payload.entry?.[0]?.changes?.[0]?.value?.metadata?.phone_number_id;
-
-      let clientId = '';
-      let whatsappToken = '';
-
-      if (phoneNumberId) {
-        const { data } = await supabaseAdmin
-          .from('agent_clients')
-          .select('id, whatsapp_webhook_port, whatsapp_access_token')
-          .eq('whatsapp_phone_number_id', phoneNumberId)
-          .single();
-
-        if (data) {
-          if (data.whatsapp_webhook_port) port = data.whatsapp_webhook_port;
-          clientId = data.id;
-          whatsappToken = data.whatsapp_access_token || '';
+    if (phoneNumberId) {
+      const { data } = await supabaseAdmin
+        .from('agent_clients')
+        .select('id, whatsapp_access_token, type_specific_data')
+        .eq('whatsapp_phone_number_id', phoneNumberId)
+        .single();
+      if (data) {
+        clientId = data.id;
+        whatsappToken = data.whatsapp_access_token;
+        if (!whatsappToken && data.type_specific_data) {
+          try {
+             const tsd = JSON.parse(data.type_specific_data);
+             whatsappToken = tsd.whatsapp_access_token || '';
+          } catch {}
         }
       }
+    }
 
-      // 2. Process status receipts (delivered, read, failed) and incoming message read events
-      const entries = payload.entry || [];
-      for (const entry of entries) {
-        const changes = entry.changes || [];
-        for (const change of changes) {
-          const value = change.value;
+    if (!clientId) {
+      return new Response('OK', { status: 200 });
+    }
 
-          // Status updates from Meta (sent, delivered, read, failed)
-          if (value && Array.isArray(value.statuses)) {
-            const statusPromises = value.statuses.map(async (statusItem: any) => {
-              const wamid = statusItem.id;
-              const newStatus = (statusItem.status || '').toLowerCase(); // 'sent' | 'delivered' | 'read' | 'failed'
-              const recipientPhone = statusItem.recipient_id ? String(statusItem.recipient_id).replace(/\D/g, '') : null;
+    // Log the event
+    await supabaseAdmin.from('whatsapp_webhook_events').insert({
+      business_id: clientId,
+      event_hash: eventHash,
+      payload: payload,
+      processed: true
+    });
 
-              console.log(`[WhatsApp Webhook Status Event] wamid=${wamid}, status=${newStatus}, recipient_id=${recipientPhone}`);
+    const entries = payload.entry || [];
+    for (const entry of entries) {
+      const changes = entry.changes || [];
+      for (const change of changes) {
+        const value = change.value;
 
-              if (newStatus) {
-                let updated = false;
+        // Status updates (sent, delivered, read, failed)
+        if (value && Array.isArray(value.statuses)) {
+          for (const statusItem of value.statuses) {
+            const wamid = statusItem.id;
+            const newStatus = (statusItem.status || '').toLowerCase();
+            const timestampStr = statusItem.timestamp ? new Date(parseInt(statusItem.timestamp) * 1000).toISOString() : new Date().toISOString();
+            
+            let errorMsg = null;
+            let errorCode = null;
+            if (statusItem.errors && statusItem.errors.length > 0) {
+              errorCode = statusItem.errors[0].code;
+              errorMsg = statusItem.errors[0].message;
+            }
 
-                const STATUS_RANK: Record<string, number> = {
-                  sent: 1,
-                  delivered: 2,
-                  read: 3,
-                  failed: 0, // Handled separately
-                };
+            const updateData: any = {
+              status: newStatus,
+              error_code: errorCode,
+              error_message: errorMsg
+            };
+            if (newStatus === 'sent') updateData.sent_at = timestampStr;
+            else if (newStatus === 'delivered') updateData.delivered_at = timestampStr;
+            else if (newStatus === 'read') updateData.read_at = timestampStr;
+            else if (newStatus === 'failed') updateData.failed_at = timestampStr;
 
-                const newRank = STATUS_RANK[newStatus] ?? 0;
+            // Fetch existing message to check status rank
+            const { data: existingMsg } = await supabaseAdmin
+              .from('whatsapp_messages')
+              .select('id, status, campaign_id, contact_id')
+              .eq('whatsapp_message_id', wamid)
+              .maybeSingle();
 
-                // Helper to execute atomic monotonic status update
-                const updateStatusMonotonic = async (queryField: 'message_id' | 'phone', queryVal: any) => {
-                  // Fetch current status first to enforce monotonic progression
-                  let q = supabaseAdmin
-                    .from('broadcast_recipient_logs')
-                    .select('id, status');
+            if (existingMsg) {
+              const STATUS_RANK: Record<string, number> = { failed: 0, queued: 1, sending: 2, sent: 3, delivered: 4, read: 5 };
+              const currentRank = STATUS_RANK[existingMsg.status] || 0;
+              const newRank = STATUS_RANK[newStatus] || 0;
 
-                  if (queryField === 'message_id') {
-                    q = q.eq('message_id', queryVal);
-                  } else {
-                    q = q.in('phone', queryVal);
-                  }
-
-                  const { data: rows } = await q;
-                  if (!rows || rows.length === 0) return 0;
-
-                  const eligibleIds: string[] = [];
-                  for (const r of rows) {
-                    const curStatus = (r.status || 'sent').toLowerCase();
-                    const curRank = STATUS_RANK[curStatus] ?? 1;
-
-                    // Failed logic: if already read, do not overwrite to failed from late/duplicate webhook
-                    if (newStatus === 'failed') {
-                      if (curStatus !== 'read') {
-                        eligibleIds.push(r.id);
-                      }
-                      continue;
-                    }
-
-                    // For non-failed statuses: update if incoming rank >= existing rank
-                    if (newRank >= curRank) {
-                      eligibleIds.push(r.id);
-                    }
-                  }
-
-                  if (eligibleIds.length === 0) {
-                    return rows.length; // Matched but ignored due to monotonic guard (valid idempotent outcome)
-                  }
-
-                  const { data: updatedRows } = await supabaseAdmin
-                    .from('broadcast_recipient_logs')
-                    .update({
-                      status: newStatus,
-                      updated_at: new Date().toISOString(),
-                    })
-                    .in('id', eligibleIds)
-                    .select('id');
-
-                  return updatedRows?.length || eligibleIds.length;
-                };
-
-                // 1. Primary correlation: Match by Meta Message ID (wamid)
-                if (wamid) {
-                  let count = await updateStatusMonotonic('message_id', wamid);
-                  
-                  // Race condition mitigation: If Meta webhook arrives before ssh.ts finishes DB insertion,
-                  // we wait a few seconds and retry.
-                  if (count === 0) {
-                    await new Promise(r => setTimeout(r, 4000));
-                    count = await updateStatusMonotonic('message_id', wamid);
-                  }
-
-                  if (count > 0) {
-                    updated = true;
-                    console.log(`[WhatsApp Webhook] Monotonic update for wamid ${wamid} to '${newStatus}' (matched rows: ${count})`);
-                  }
-                }
-
-                // 2. Fallback correlation: Match by recipient phone variants
-                if (!updated && recipientPhone) {
-                  const phoneVariants = getPhoneVariants(recipientPhone);
-                  const count = await updateStatusMonotonic('phone', phoneVariants);
-                  if (count > 0) {
-                    updated = true;
-                    console.log(`[WhatsApp Webhook] Fallback monotonic update for phone variants ${phoneVariants.join(',')} to '${newStatus}' (matched rows: ${count})`);
-                  }
-                }
-
-                if (newStatus === 'read' && recipientPhone) {
-                  const phoneVariants = getPhoneVariants(recipientPhone);
-                  await supabaseAdmin
-                    .from('leads_cache')
-                    .update({
-                      last_read_at: new Date().toISOString(),
-                      updated_at: new Date().toISOString()
-                    })
-                    .in('phone', phoneVariants);
-                }
-
-                if (!updated) {
-                  console.warn(`[WhatsApp Webhook WARNING] Received status '${newStatus}' for wamid=${wamid}, phone=${recipientPhone}, but NO rows matched in broadcast_recipient_logs!`);
-                }
-              }
-            });
-            await Promise.all(statusPromises);
-          }
-
-          // Inbound customer message replies (implicitly marks previous broadcast sent to this phone as read)
-          if (value && Array.isArray(value.messages)) {
-            for (const msg of value.messages) {
-              const fromPhone = msg.from ? String(msg.from).replace(/\D/g, '') : null;
-              if (fromPhone) {
-                const phoneVariants = getPhoneVariants(fromPhone);
-
-                console.log(`[WhatsApp Webhook] Inbound reply received from ${fromPhone} — marking broadcast logs as 'read'`);
-                await supabaseAdmin
-                  .from('broadcast_recipient_logs')
-                  .update({
-                    status: 'read',
-                    updated_at: new Date().toISOString()
-                  })
-                  .in('phone', phoneVariants)
-                  .neq('status', 'read');
-
-                await supabaseAdmin
-                  .from('leads_cache')
-                  .update({
-                    last_read_at: new Date().toISOString(),
-                    last_customer_message_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
-                  })
-                  .in('phone', phoneVariants);
-              }
-
-              // Phase 1: Intercept incoming audio messages
-              if ((msg.type === 'audio' || msg.type === 'voice') && msg[msg.type]?.id && whatsappToken && clientId && fromPhone) {
-                try {
-                  const mediaId = msg[msg.type].id;
-                  const mimeType = msg[msg.type].mime_type || 'audio/ogg';
-                  const ext = mimeType.includes('mp4') ? 'mp4' : mimeType.includes('mpeg') ? 'mp3' : 'ogg';
-                  
-                  // 1. Get media URL
-                  const metaRes = await fetch(`https://graph.facebook.com/v19.0/${mediaId}`, {
-                    headers: { 'Authorization': `Bearer ${whatsappToken}` }
-                  });
-                  const metaJson = await metaRes.json();
-                  
-                  if (metaJson.url) {
-                    // 2. Download media binary
-                    const audioRes = await fetch(metaJson.url, {
-                      headers: { 'Authorization': `Bearer ${whatsappToken}` }
-                    });
-                    const audioBuffer = await audioRes.arrayBuffer();
-                    
-                    // 3. Upload to Supabase Storage
-                    const fileName = `${clientId}/${Date.now()}_${mediaId}.${ext}`;
-                    const { data: uploadData, error: uploadErr } = await supabaseAdmin.storage
-                      .from('chat-media')
-                      .upload(fileName, audioBuffer, {
-                        contentType: mimeType,
-                        upsert: true
-                      });
-                      
-                    if (!uploadErr && uploadData) {
-                      const { data: publicUrlData } = supabaseAdmin.storage
-                        .from('chat-media')
-                        .getPublicUrl(uploadData.path);
-                        
-                      const publicUrl = publicUrlData.publicUrl;
-                      
-                      // 4. Insert a shadow message for the CRM to render the audio
-                      await supabaseAdmin.from('messages').insert({
-                        lead_id: fromPhone,
-                        client_id: clientId,
-                        role: 'user',
-                        content: `[media:audio:${publicUrl}]`,
-                        source: 'whatsapp'
-                      });
-                      console.log(`[WhatsApp Webhook] Intercepted audio and saved to DB: ${publicUrl}`);
-                    } else {
-                      console.error(`[WhatsApp Webhook] Failed to upload audio:`, uploadErr);
-                    }
-                  }
-                } catch (audioErr: any) {
-                  console.error(`[WhatsApp Webhook] Audio interception failed:`, audioErr.message);
+              // Only update if rank is higher, except for failed (failed is final)
+              if (newRank >= currentRank || newStatus === 'failed') {
+                await supabaseAdmin.from('whatsapp_messages').update(updateData).eq('id', existingMsg.id);
+                
+                // If it's part of a campaign, update recipient
+                if (existingMsg.campaign_id) {
+                  await supabaseAdmin.from('whatsapp_campaign_recipients').update(updateData).eq('message_id', existingMsg.id);
                 }
               }
             }
           }
         }
+
+        // Inbound customer messages
+        if (value && Array.isArray(value.messages)) {
+          for (const msg of value.messages) {
+            const fromPhone = msg.from;
+            const wamid = msg.id;
+            const timestampStr = msg.timestamp ? new Date(parseInt(msg.timestamp) * 1000).toISOString() : new Date().toISOString();
+            
+            const contactName = msg.context?.from || value.contacts?.[0]?.profile?.name || fromPhone;
+
+            // 1. Find or create whatsapp_contacts
+            let { data: contact } = await supabaseAdmin
+              .from('whatsapp_contacts')
+              .select('id')
+              .eq('business_id', clientId)
+              .eq('normalized_phone', fromPhone)
+              .maybeSingle();
+
+            if (!contact) {
+              const { data: newContact } = await supabaseAdmin
+                .from('whatsapp_contacts')
+                .insert({
+                  business_id: clientId,
+                  name: contactName,
+                  phone: fromPhone,
+                  normalized_phone: fromPhone,
+                  last_contacted_at: timestampStr
+                }).select('id').single();
+              contact = newContact;
+            } else {
+              await supabaseAdmin.from('whatsapp_contacts').update({ last_contacted_at: timestampStr }).eq('id', contact!.id);
+            }
+
+            // 2. Find or create whatsapp_conversations
+            let { data: conversation } = await supabaseAdmin
+              .from('whatsapp_conversations')
+              .select('id, unread_count')
+              .eq('business_id', clientId)
+              .eq('contact_id', contact!.id)
+              .maybeSingle();
+
+            if (!conversation) {
+              const { data: newConv } = await supabaseAdmin
+                .from('whatsapp_conversations')
+                .insert({
+                  business_id: clientId,
+                  contact_id: contact!.id,
+                  unread_count: 0
+                }).select('id, unread_count').single();
+              conversation = newConv;
+            }
+
+            // 3. Process media if any
+            let contentStr = '';
+            let mediaUrl = null;
+            if (msg.type === 'text') {
+              contentStr = msg.text.body;
+            } else {
+               const mediaObj = msg[msg.type];
+               if (mediaObj && mediaObj.id && whatsappToken) {
+                 try {
+                   // Download media
+                   const metaRes = await fetch(`https://graph.facebook.com/v19.0/${mediaObj.id}`, { headers: { 'Authorization': `Bearer ${whatsappToken}` } });
+                   const metaJson = await metaRes.json();
+                   if (metaJson.url) {
+                      const mediaRes = await fetch(metaJson.url, { headers: { 'Authorization': `Bearer ${whatsappToken}` } });
+                      const mediaBuffer = await mediaRes.arrayBuffer();
+                      const fileName = `${clientId}/${Date.now()}_${mediaObj.id}`;
+                      const { data: uploadData } = await supabaseAdmin.storage.from('chat-media').upload(fileName, mediaBuffer, { upsert: true });
+                      if (uploadData) {
+                        const { data: publicUrlData } = supabaseAdmin.storage.from('chat-media').getPublicUrl(uploadData.path);
+                        mediaUrl = publicUrlData.publicUrl;
+                      }
+                   }
+                   contentStr = `[media:${msg.type}:${mediaUrl || mediaObj.id}]`;
+                   if (msg.type === 'document' && mediaObj.caption) contentStr += ` ${mediaObj.caption}`;
+                   if (msg.type === 'image' && mediaObj.caption) contentStr += ` ${mediaObj.caption}`;
+                   if (msg.type === 'video' && mediaObj.caption) contentStr += ` ${mediaObj.caption}`;
+                 } catch (e) {}
+               }
+            }
+
+            // 4. Insert message
+            const { data: newMessage } = await supabaseAdmin.from('whatsapp_messages').insert({
+              business_id: clientId,
+              conversation_id: conversation!.id,
+              contact_id: contact!.id,
+              direction: 'incoming',
+              message_type: msg.type,
+              content: contentStr,
+              media_url: mediaUrl,
+              whatsapp_message_id: wamid,
+              status: 'received',
+              created_at: timestampStr
+            }).select('id').single();
+
+            // 5. Update conversation
+            if (newMessage) {
+              await supabaseAdmin.from('whatsapp_conversations').update({
+                last_message_id: newMessage.id,
+                last_message_at: timestampStr,
+                unread_count: (conversation!.unread_count || 0) + 1
+              }).eq('id', conversation!.id);
+            }
+          }
+        }
       }
-    } catch (err: any) {
-      console.error('[WhatsApp Webhook] Payload processing error:', err.message);
     }
 
-    const hermesUrl = `http://${sharedServerIp}:${port}/whatsapp/webhook`;
-
-    try {
-      await fetch(hermesUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': contentType,
-          'x-hub-signature-256': signature,
-        },
-        body,
-        signal: AbortSignal.timeout(30000),
-      });
-    } catch (err) {
-      console.error('[Webhook] Forward failed:', err);
-    }
-
-    // Always return 200 to Meta
     return new Response('OK', { status: 200 });
-
   } catch (error) {
     console.error('[Webhook] POST error:', error);
-    return new Response('OK', { status: 200 });
+    return new Response('OK', { status: 200 }); // Always 200 to prevent Meta retries
   }
 }

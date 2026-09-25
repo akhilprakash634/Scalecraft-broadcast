@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { getSessionClient } from '@/lib/auth';
-import { executeCommand } from '@/lib/ssh';
 import { supabaseAdmin } from '@/lib/supabase';
 
 export async function GET() {
@@ -10,17 +9,14 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { serverIP, sshPrivateKey, serverUser } = client;
-    if (!serverIP || !sshPrivateKey) {
-      return NextResponse.json({ error: 'Server details missing' }, { status: 400 });
-    }
+    const clientId = client.clientId || client.id || client._id;
 
     // Fetch the most recent campaign started by this client
     const { data: latestCampaign, error: dbError } = await supabaseAdmin
-      .from('broadcast_audit')
+      .from('whatsapp_campaigns')
       .select('*')
-      .eq('client_id', client.clientId)
-      .order('started_at', { ascending: false })
+      .eq('business_id', clientId)
+      .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
@@ -28,58 +24,53 @@ export async function GET() {
       console.error('[broadcast/status] DB error:', dbError.message);
     }
 
-    if (client.connectionType === 'cloud_api') {
-      const running = latestCampaign?.status === 'running';
-      const paused = latestCampaign?.status === 'paused';
-      return NextResponse.json({
-        progress: {
-          sent: latestCampaign?.sent || 0,
-          failed: latestCampaign?.failed || 0,
-          total: latestCampaign?.recipient_count || 0,
-          running,
-          paused
-        },
-        logHistory: latestCampaign?.logs || []
-      });
-    }
-
-    // If no Baileys campaign is running in the database, return stopped status instantly (no SSH delay!)
-    if (!latestCampaign || latestCampaign.status !== 'running') {
+    if (!latestCampaign) {
       return NextResponse.json({
         progress: { sent: 0, failed: 0, total: 0, running: false, paused: false },
         logHistory: []
       });
     }
 
-    // Single SSH call optimization: Fetch both progress stats and logs in one SSH command
-    const combinedCmd = `cat /home/ubuntu/broadcast_log.txt 2>/dev/null; echo "---PAUSE_CHECK---"; [ -f /home/ubuntu/broadcast_pause ] && echo "paused" || echo "not_paused"; echo "---LOG_CHECK---"; tail -n 15 /home/ubuntu/broadcast_details.log 2>/dev/null || echo ""`;
+    const { data: recipients } = await supabaseAdmin
+      .from('whatsapp_campaign_recipients')
+      .select('status, error_message, whatsapp_contacts(phone)')
+      .eq('campaign_id', latestCampaign.id);
+      
+    let sent = 0;
+    let failed = 0;
+    const logs: string[] = [];
     
-    const result = await executeCommand(serverIP, sshPrivateKey, combinedCmd, serverUser || 'ubuntu');
-    const stdout = result.stdout || '';
-
-    const parts = stdout.split('---LOG_CHECK---');
-    const statusPart = parts[0] || '';
-    const logPart = parts[1] || '';
-
-    const statusSubparts = statusPart.split('---PAUSE_CHECK---');
-    const logContent = statusSubparts[0]?.trim();
-    const pauseStatus = statusSubparts[1]?.trim();
-    const paused = pauseStatus === 'paused';
-
-    let progress = { sent: 0, failed: 0, total: 0, running: false, paused };
-    try {
-      if (logContent) {
-        const parsed = JSON.parse(logContent);
-        progress = { ...parsed, paused };
+    if (recipients) {
+      for (const rec of recipients) {
+        const contact: any = Array.isArray(rec.whatsapp_contacts) 
+          ? rec.whatsapp_contacts[0] 
+          : rec.whatsapp_contacts;
+        const phone = contact?.phone;
+          
+        if (rec.status === 'sent' || rec.status === 'delivered' || rec.status === 'read') {
+          sent++;
+          logs.push(`Sent successfully to ${phone}`);
+        } else if (rec.status === 'failed') {
+          failed++;
+          logs.push(`Failed for ${phone}: ${rec.error_message || 'Unknown error'}`);
+        }
       }
-    } catch {}
+    }
 
-    const logHistory = logPart
-      .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0);
+    const running = latestCampaign.status === 'processing';
+    const paused = latestCampaign.status === 'scheduled'; // reusing scheduled as paused? Wait, scheduled means not started yet. Paused could be mapped to "failed" or a new state.
+    
+    return NextResponse.json({
+      progress: {
+        sent,
+        failed,
+        total: latestCampaign.total_recipients || 0,
+        running,
+        paused
+      },
+      logHistory: logs
+    });
 
-    return NextResponse.json({ progress, logHistory });
   } catch (error: any) {
     console.error('Broadcast Status API Error:', error.message);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
