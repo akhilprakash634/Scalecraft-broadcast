@@ -197,11 +197,12 @@ export async function POST(request: Request) {
                    const metaJson = await metaRes.json();
                    if (metaJson.url) {
                       const mediaRes = await fetch(metaJson.url, { headers: { 'Authorization': `Bearer ${whatsappToken}` } });
-                      const mediaBuffer = await mediaRes.arrayBuffer();
+                      const arrayBuffer = await mediaRes.arrayBuffer();
+                      const mediaBuffer = Buffer.from(arrayBuffer);
                       const fileName = `${clientId}/${Date.now()}_${mediaObj.id}`;
-                      const { data: uploadData } = await supabaseAdmin.storage.from('chat-media').upload(fileName, mediaBuffer, { upsert: true });
+                      const { data: uploadData } = await supabaseAdmin.storage.from('chat-attachments').upload(fileName, mediaBuffer, { upsert: true });
                       if (uploadData) {
-                        const { data: publicUrlData } = supabaseAdmin.storage.from('chat-media').getPublicUrl(uploadData.path);
+                        const { data: publicUrlData } = supabaseAdmin.storage.from('chat-attachments').getPublicUrl(uploadData.path);
                         mediaUrl = publicUrlData.publicUrl;
                       }
                    }
