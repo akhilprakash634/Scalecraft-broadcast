@@ -1251,6 +1251,9 @@ function LeadsPageInner() {
                 isActive={selectedLeadId === lead.phone}
                 onClick={() => {
                   setSelectedLeadId(lead.phone);
+                  setLeads((prevLeads) => 
+                    prevLeads.map((l) => l.phone === lead.phone ? { ...l, unread_count: 0 } : l)
+                  );
                   userInteracted.current = true;
                   const url = new URL(window.location.href);
                   url.searchParams.set('id', lead.phone);

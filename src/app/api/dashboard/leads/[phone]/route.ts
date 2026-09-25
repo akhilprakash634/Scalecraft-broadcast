@@ -39,10 +39,14 @@ export async function GET(request: Request, segmentData: { params: Params }) {
     // 2. Get conversation
     const { data: conversation } = await supabaseAdmin
       .from('whatsapp_conversations')
-      .select('id')
+      .select('id, unread_count')
       .eq('business_id', clientId)
       .eq('contact_id', contact.id)
       .maybeSingle();
+
+    if (conversation && conversation.unread_count > 0) {
+      await supabaseAdmin.from('whatsapp_conversations').update({ unread_count: 0 }).eq('id', conversation.id);
+    }
 
     if (!conversation) {
       return NextResponse.json({ phone: contact.phone, name: contact.name, messages: [] });
