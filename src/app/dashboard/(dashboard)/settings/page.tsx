@@ -36,11 +36,12 @@ export default function SettingsPage() {
   const [submittingBusiness, setSubmittingBusiness] = useState(false);
   const [businessSuccess, setBusinessSuccess] = useState('');
 
-  const webhookUrl = 'https://thescalecraft.in/api/webhooks/whatsapp-cloud';
+  const [webhookUrl, setWebhookUrl] = useState('Loading...');
   const verifyToken = client?.whatsappVerifyToken || (client?.hermesProfile ? `${client.hermesProfile}-webhook-token` : '');
 
   const fetchClientProfile = async () => {
     try {
+      setWebhookUrl(`${window.location.origin}/api/webhooks/whatsapp-cloud`);
       const res = await fetch('/api/dashboard/client');
       if (res.ok) {
         const data = await res.json();
