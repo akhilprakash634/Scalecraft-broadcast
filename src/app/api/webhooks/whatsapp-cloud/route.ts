@@ -144,7 +144,7 @@ export async function POST(request: Request) {
             // 1. Find or create whatsapp_contacts
             let { data: contact } = await supabaseAdmin
               .from('whatsapp_contacts')
-              .select('id')
+              .select('id, name')
               .eq('business_id', clientId)
               .eq('normalized_phone', fromPhone)
               .maybeSingle();
@@ -158,10 +158,14 @@ export async function POST(request: Request) {
                   phone: fromPhone,
                   normalized_phone: fromPhone,
                   last_contacted_at: timestampStr
-                }).select('id').single();
+                }).select('id, name').single();
               contact = newContact;
             } else {
-              await supabaseAdmin.from('whatsapp_contacts').update({ last_contacted_at: timestampStr }).eq('id', contact!.id);
+              const updateData: any = { last_contacted_at: timestampStr };
+              if (contactName && contactName !== fromPhone && (!contact.name || contact.name === fromPhone)) {
+                updateData.name = contactName;
+              }
+              await supabaseAdmin.from('whatsapp_contacts').update(updateData).eq('id', contact.id);
             }
 
             // 2. Find or create whatsapp_conversations

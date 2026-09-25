@@ -242,6 +242,10 @@ function LeadsPageInner() {
           previewText = '🎵 Voice note';
         } else if (type === 'document') {
           previewText = '📄 Document';
+        } else if (type === 'video') {
+          previewText = '🎥 Video';
+        } else if (type === 'sticker') {
+          previewText = '✨ Sticker';
         }
       }
     }

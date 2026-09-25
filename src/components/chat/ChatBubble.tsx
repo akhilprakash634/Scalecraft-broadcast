@@ -199,19 +199,19 @@ export default function ChatBubble({ message, isConsecutive = false, onRetry }: 
       return <p className="whitespace-pre-wrap font-sans">{parsed.caption || ''}</p>;
     }
 
-    if (parsed.mediaType === 'image') {
+    if (parsed.mediaType === 'image' || parsed.mediaType === 'sticker') {
       return (
-        <div className="space-y-2 max-w-[280px]">
+        <div className={`space-y-2 ${parsed.mediaType === 'sticker' ? 'max-w-[180px]' : 'max-w-[280px]'}`}>
           <a
             href={parsed.mediaUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="block overflow-hidden rounded-lg border border-black/10 dark:border-white/10 group cursor-pointer"
+            className={`block overflow-hidden group cursor-pointer ${parsed.mediaType === 'sticker' ? '' : 'rounded-lg border border-black/10 dark:border-white/10'}`}
           >
             <img
               src={parsed.mediaUrl}
               alt="Sent attachment"
-              className="w-full h-auto max-h-[220px] object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+              className={`w-full h-auto object-cover transition-transform duration-200 group-hover:scale-[1.02] ${parsed.mediaType === 'sticker' ? 'max-h-[180px] bg-transparent drop-shadow-sm' : 'max-h-[220px]'}`}
             />
           </a>
           {parsed.caption && (

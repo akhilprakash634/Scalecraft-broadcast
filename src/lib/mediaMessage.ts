@@ -1,6 +1,6 @@
 export interface ParsedMediaMessage {
   isMedia: boolean;
-  mediaType?: 'image' | 'audio' | 'document' | 'video';
+  mediaType?: 'image' | 'audio' | 'document' | 'video' | 'sticker';
   mediaUrl?: string;
   filename?: string;
   caption: string;
@@ -137,10 +137,10 @@ export function parseMessageContent(text: string): ParsedMediaMessage {
 
       const firstColon = mediaPart.indexOf(':');
       if (firstColon !== -1) {
-        const type = mediaPart.slice(0, firstColon) as 'image' | 'audio' | 'document' | 'video';
+        const type = mediaPart.slice(0, firstColon) as 'image' | 'audio' | 'document' | 'video' | 'sticker';
         const payload = mediaPart.slice(firstColon + 1);
 
-        if (type === 'image' || type === 'audio' || type === 'document' || type === 'video') {
+        if (type === 'image' || type === 'audio' || type === 'document' || type === 'video' || type === 'sticker') {
           if (type === 'document' || type === 'video') {
             const pipeIndex = payload.indexOf('|');
             if (pipeIndex !== -1) {
@@ -190,7 +190,7 @@ export function parseMessageContent(text: string): ParsedMediaMessage {
  * Formats media properties into the standardized prefix-based message string.
  */
 export function formatMediaMessage(
-  type: 'image' | 'audio' | 'document' | 'video',
+  type: 'image' | 'audio' | 'document' | 'video' | 'sticker',
   url: string,
   filename?: string,
   caption?: string
