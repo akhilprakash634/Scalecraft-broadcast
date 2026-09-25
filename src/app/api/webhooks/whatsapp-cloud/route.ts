@@ -197,20 +197,46 @@ export async function POST(request: Request) {
                    const metaJson = await metaRes.json();
                    if (metaJson.url) {
                       const mediaRes = await fetch(metaJson.url, { headers: { 'Authorization': `Bearer ${whatsappToken}` } });
+                      const contentType = mediaRes.headers.get('content-type') || mediaObj.mime_type || 'application/octet-stream';
+                      
+                      let ext = '';
+                      if (mediaObj.filename) {
+                         const parts = mediaObj.filename.split('.');
+                         if (parts.length > 1) ext = '.' + parts.pop();
+                      } else {
+                         if (contentType.includes('jpeg') || contentType.includes('jpg')) ext = '.jpg';
+                         else if (contentType.includes('png')) ext = '.png';
+                         else if (contentType.includes('webp')) ext = '.webp';
+                         else if (contentType.includes('mp4')) ext = '.mp4';
+                         else if (contentType.includes('pdf')) ext = '.pdf';
+                         else if (contentType.includes('ogg') || contentType.includes('opus')) ext = '.ogg';
+                         else if (contentType.includes('mpeg') || contentType.includes('mp3')) ext = '.mp3';
+                         else if (contentType.includes('amr')) ext = '.amr';
+                         else if (contentType.includes('aac')) ext = '.aac';
+                      }
+                      
                       const arrayBuffer = await mediaRes.arrayBuffer();
                       const mediaBuffer = Buffer.from(arrayBuffer);
-                      const fileName = `${clientId}/${Date.now()}_${mediaObj.id}`;
-                      const { data: uploadData } = await supabaseAdmin.storage.from('chat-attachments').upload(fileName, mediaBuffer, { upsert: true });
+                      const fileName = `${clientId}/${Date.now()}_${mediaObj.id}${ext}`;
+                      const { data: uploadData } = await supabaseAdmin.storage.from('chat-attachments').upload(fileName, mediaBuffer, { 
+                        upsert: true,
+                        contentType: contentType
+                      });
                       if (uploadData) {
                         const { data: publicUrlData } = supabaseAdmin.storage.from('chat-attachments').getPublicUrl(uploadData.path);
                         mediaUrl = publicUrlData.publicUrl;
                       }
                    }
-                   contentStr = `[media:${msg.type}:${mediaUrl || mediaObj.id}]`;
-                   if (msg.type === 'document' && mediaObj.caption) contentStr += ` ${mediaObj.caption}`;
-                   if (msg.type === 'image' && mediaObj.caption) contentStr += ` ${mediaObj.caption}`;
-                   if (msg.type === 'video' && mediaObj.caption) contentStr += ` ${mediaObj.caption}`;
-                 } catch (e) {}
+                 } catch (e) { console.error('Media download error:', e); }
+
+                 let finalUrl = mediaUrl || mediaObj.id;
+                 if (msg.type === 'document' || msg.type === 'video') {
+                   const docName = mediaObj.filename || (msg.type === 'video' ? 'Video.mp4' : 'Document');
+                   contentStr = `[media:${msg.type}:${finalUrl}|${docName}]`;
+                 } else {
+                   contentStr = `[media:${msg.type}:${finalUrl}]`;
+                 }
+                 if (mediaObj.caption) contentStr += `\n${mediaObj.caption}`;
                }
             }
 
