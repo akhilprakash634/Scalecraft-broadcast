@@ -80,8 +80,7 @@ export async function POST(request: Request) {
     await supabaseAdmin.from('whatsapp_webhook_events').insert({
       business_id: clientId,
       event_hash: eventHash,
-      payload: payload,
-      processed: true
+      payload: payload
     });
 
     const entries = payload.entry || [];
