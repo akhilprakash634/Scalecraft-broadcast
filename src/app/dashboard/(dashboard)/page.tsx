@@ -17,6 +17,10 @@ import {
   MessageSquare,
   ArrowRight,
   TrendingUp,
+  MessageCircle,
+  Clock,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 
 interface OverviewStats {
@@ -29,19 +33,25 @@ interface OverviewStats {
   replies: number;
 }
 
+interface OverviewData {
+  stats: OverviewStats;
+  whatsappStatus: string;
+  recentConversations: any[];
+}
+
 export default function DashboardOverviewPage() {
-  const [stats, setStats] = useState<OverviewStats | null>(null);
+  const [data, setData] = useState<OverviewData | null>(null);
   const [recentBroadcasts, setRecentBroadcasts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadData() {
       try {
-        // Fetch KPI stats
+        // Fetch KPI stats & conversations
         const statsRes = await fetch('/api/dashboard/overview');
         if (statsRes.ok) {
           const statsData = await statsRes.json();
-          setStats(statsData.stats);
+          setData(statsData);
         }
 
         // Fetch recent broadcasts using existing history API
@@ -119,47 +129,70 @@ export default function DashboardOverviewPage() {
         </div>
       </div>
 
+      {/* WhatsApp Status Banner */}
+      <Card padding="none" className="overflow-hidden border border-border">
+        <div className="px-5 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-full ${data?.whatsappStatus === 'Connected' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+              {data?.whatsappStatus === 'Connected' ? <Wifi size={18} /> : <WifiOff size={18} />}
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-text-primary tracking-wide">
+                WhatsApp Status
+              </h3>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className={`h-2 w-2 rounded-full ${data?.whatsappStatus === 'Connected' ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                <span className="text-xs font-semibold text-text-muted">{data?.whatsappStatus || 'Loading...'}</span>
+              </div>
+            </div>
+          </div>
+          <Link href="/dashboard/settings" className="text-xs font-bold text-brand hover:underline">
+            Manage Settings
+          </Link>
+        </div>
+      </Card>
+
       {/* Row 1: KPI Cards Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
         <Stat
           label="Total Contacts"
-          value={stats?.totalContacts?.toLocaleString() || '0'}
+          value={data?.stats?.totalContacts?.toLocaleString() || '0'}
           icon={<Users size={18} />}
           description="Total synced contacts"
         />
         <Stat
           label="Total Broadcasts"
-          value={stats?.totalBroadcasts?.toLocaleString() || '0'}
+          value={data?.stats?.totalBroadcasts?.toLocaleString() || '0'}
           icon={<Megaphone size={18} />}
           description="Campaigns created"
         />
         <Stat
           label="Messages Sent"
-          value={stats?.sent?.toLocaleString() || '0'}
+          value={data?.stats?.sent?.toLocaleString() || '0'}
           icon={<Send size={18} />}
           description="Total dispatched"
         />
         <Stat
           label="Delivered"
-          value={stats?.delivered?.toLocaleString() || '0'}
+          value={data?.stats?.delivered?.toLocaleString() || '0'}
           icon={<CheckCircle size={18} />}
           description="Successfully reached"
         />
         <Stat
           label="Read"
-          value={stats?.read?.toLocaleString() || '0'}
+          value={data?.stats?.read?.toLocaleString() || '0'}
           icon={<Eye size={18} />}
           description="Opened by recipients"
         />
         <Stat
           label="Replies"
-          value={stats?.replies?.toLocaleString() || '0'}
+          value={data?.stats?.replies?.toLocaleString() || '0'}
           icon={<MessageSquare size={18} />}
           description="Inbound messages"
         />
         <Stat
           label="Failed"
-          value={stats?.failed?.toLocaleString() || '0'}
+          value={data?.stats?.failed?.toLocaleString() || '0'}
           icon={<AlertTriangle size={18} />}
           description="Delivery errors"
         />
@@ -212,6 +245,57 @@ export default function DashboardOverviewPage() {
                     <td className="p-4 text-danger">{camp.failed?.toLocaleString() || '0'}</td>
                     <td className="p-4">{getStatusBadge(camp.status)}</td>
                     <td className="p-4 text-text-muted">{formatDate(camp.created_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      {/* Row 3: Recent Conversations */}
+      <Card padding="none" className="overflow-hidden">
+        <div className="px-5 py-4 border-b border-border dark:border-border flex items-center justify-between">
+          <h3 className="text-[13px] font-black text-text-primary dark:text-foreground uppercase tracking-wider font-sans">
+            Recent Conversations
+          </h3>
+          <Link
+            href="/dashboard/leads"
+            className="text-xs font-bold text-brand hover:underline flex items-center gap-1 cursor-pointer"
+          >
+            <span>View Inbox</span>
+            <ArrowRight size={14} />
+          </Link>
+        </div>
+
+        {!data?.recentConversations || data.recentConversations.length === 0 ? (
+          <div className="p-12 text-center text-xs text-text-subtle italic">
+            No recent conversations found.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-surface-0 dark:bg-surface-2 border-b border-border dark:border-border text-[10px] font-black text-text-muted uppercase tracking-wider">
+                  <th className="p-4 font-black">Customer</th>
+                  <th className="p-4 font-black">Last Message</th>
+                  <th className="p-4 font-black">Time</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border dark:divide-border text-xs font-semibold">
+                {data.recentConversations.map((conv, i) => (
+                  <tr key={i} className="hover:bg-surface-0/50 dark:hover:bg-surface-2/50 transition-colors">
+                    <td className="p-4 font-bold text-text-primary flex items-center gap-2">
+                      <div className="bg-brand/10 text-brand p-1.5 rounded-full">
+                        <MessageCircle size={14} />
+                      </div>
+                      {conv.customer}
+                    </td>
+                    <td className="p-4 text-text-secondary max-w-[300px] truncate">{conv.lastMessage}</td>
+                    <td className="p-4 text-text-muted flex items-center gap-1">
+                      <Clock size={12} />
+                      {new Date(conv.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                    </td>
                   </tr>
                 ))}
               </tbody>

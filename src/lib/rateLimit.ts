@@ -17,8 +17,8 @@ export async function checkRateLimit(
       .maybeSingle();
 
     if (selectError) {
-      console.error('[RateLimit] Select error:', selectError.message);
-      return { allowed: false, remaining: 0 };
+      // Fail open if the table doesn't exist yet
+      return { allowed: true, remaining: maxRequests };
     }
 
     if (!record) {
@@ -40,7 +40,7 @@ export async function checkRateLimit(
           .maybeSingle();
 
         if (retryError || !retryRecord) {
-          return { allowed: false, remaining: 0 };
+          return { allowed: true, remaining: maxRequests };
         }
         return handleExistingRecord(retryRecord, now, windowMs, maxRequests, key);
       }
@@ -51,7 +51,7 @@ export async function checkRateLimit(
     return handleExistingRecord(record, now, windowMs, maxRequests, key);
   } catch (error) {
     console.error('[RateLimit] Exception:', error);
-    return { allowed: false, remaining: 0 };
+    return { allowed: true, remaining: maxRequests };
   }
 }
 

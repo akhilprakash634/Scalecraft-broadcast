@@ -196,11 +196,11 @@ export default function BroadcastPage() {
   const templates = [
     {
       name: 'Welcome Offer 🎟️',
-      text: 'Hey! Thanks for connecting with *ScaleCraft*. Here is a special 15% discount code just for you: *WELCOME15*. Duplicate our system templates today and start scaling! Reply to this message if you need help. 😊',
+      text: 'Hey! Thanks for connecting. Here is a special 15% discount code just for you: *WELCOME15*. Start scaling today! Reply to this message if you need help. 😊',
     },
     {
       name: 'Follow-up Objections 🏷️',
-      text: 'Hi there! Just checking if you had any other questions about *ScaleCraft Agent*? We currently have a limited-time deal where we handle VPS setup and server operations for a flat one-time rate. Let me know if you would like to get started! 🚀',
+      text: 'Hi there! Just checking if you had any other questions about our *WhatsApp Agent*? We currently have a limited-time deal. Let me know if you would like to get started! 🚀',
     },
     {
       name: 'Digital Product Discount 🎁',
@@ -1270,7 +1270,7 @@ export default function BroadcastPage() {
               </div>
               {client.dailyBroadcastLimit != null && (
                 <p className="text-[9px] text-text-muted italic">
-                  * Custom limit cap of {client.dailyBroadcastLimit} applied by ScaleCraft administrator.
+                  * Custom limit cap of {client.dailyBroadcastLimit} applied by Administrator.
                 </p>
               )}
             </div>

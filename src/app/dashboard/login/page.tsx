@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -14,6 +14,16 @@ export default function DashboardLoginPage() {
   const [message, setMessage] = useState('');
   const [activeTab, setActiveTab] = useState<'otp' | 'password'>('otp');
   const [password, setPassword] = useState('');
+  const [dbStatus, setDbStatus] = useState<'loading' | 'connected' | 'error'>('loading');
+
+  useEffect(() => {
+    fetch('/api/dashboard/health')
+      .then((res) => {
+        if (res.ok) setDbStatus('connected');
+        else setDbStatus('error');
+      })
+      .catch(() => setDbStatus('error'));
+  }, []);
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,7 +131,7 @@ export default function DashboardLoginPage() {
       {/* Brand Header */}
       <div className="text-center mb-8">
         <h1 className="text-3xl font-extrabold text-[#111110] tracking-tight uppercase font-heading">
-          ScaleCraft<span className="text-[#1B5E20]">.</span>
+          WhatsApp Platform<span className="text-[#1B5E20]">.</span>
         </h1>
         <p className="text-xs uppercase tracking-widest text-[#6F6E69] font-semibold mt-1">
           SaaS Client Control Portal
@@ -129,7 +139,15 @@ export default function DashboardLoginPage() {
       </div>
 
       {/* Main Login Card */}
-      <div className="bg-white w-full max-w-md rounded-2xl border border-[#EBEBEB] shadow-[0_4px_30px_rgba(0,0,0,0.02)] p-8">
+      <div className="bg-white w-full max-w-md rounded-2xl border border-[#EBEBEB] shadow-[0_4px_30px_rgba(0,0,0,0.02)] p-8 relative overflow-hidden">
+        
+        {/* DB Connection Indicator */}
+        <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
+          <span className={`h-2 w-2 rounded-full ${dbStatus === 'connected' ? 'bg-green-500' : dbStatus === 'loading' ? 'bg-yellow-400' : 'bg-red-500'}`}></span>
+          <span className="text-[9px] font-bold uppercase tracking-wider text-gray-500">
+            {dbStatus === 'connected' ? 'DB Connected' : dbStatus === 'loading' ? 'Checking DB...' : 'DB Error'}
+          </span>
+        </div>
         
         {/* Tab Navigation */}
         {step === 'phone' && (
@@ -343,7 +361,7 @@ export default function DashboardLoginPage() {
 
       {/* Footer Info */}
       <footer className="mt-8 text-center text-xs text-[#AEACA5] space-y-1">
-        <p>&copy; {new Date().getFullYear()} ScaleCraft. All rights reserved.</p>
+        <p>&copy; {new Date().getFullYear()} WhatsApp Platform. All rights reserved.</p>
         <p>
           Need help? Message our client support team on WhatsApp at{' '}
           <a href="https://wa.me/918078004732" target="_blank" className="text-[#1B5E20] hover:underline font-semibold">

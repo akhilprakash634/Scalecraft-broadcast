@@ -100,9 +100,7 @@ export default function DashboardShell({ children, businessName, botNumber, clie
     { name: 'Settings', href: '/dashboard/settings', icon: Settings2 },
   ];
 
-  const visibleNavItems = (status === 'active' || status === 'loading' || status === 'installing')
-    ? navItems
-    : navItems.filter((item) => item.name === 'Overview');
+  const visibleNavItems = navItems;
 
   const formatPhoneNumber = (num: string) => {
     if (!num) return '';
@@ -405,7 +403,7 @@ export default function DashboardShell({ children, businessName, botNumber, clie
           <div className="flex items-center space-x-2">
             <img 
               src="/scalecraft-logo-dark.svg" 
-              alt="ScaleCraft"
+              alt="WhatsApp Platform"
               className="h-6 w-auto"
             />
             <span className="text-[10px] bg-brand text-white px-2 py-0.5 rounded font-black uppercase">
@@ -445,7 +443,7 @@ export default function DashboardShell({ children, businessName, botNumber, clie
               <div className="flex items-center space-x-2">
                 <img 
                   src="/scalecraft-logo-dark.svg" 
-                  alt="ScaleCraft"
+                  alt="WhatsApp Platform"
                   className="h-6 w-auto"
                 />
                 <span className="text-[9px] bg-brand text-white px-1.5 py-0.5 rounded font-black uppercase">
@@ -580,7 +578,7 @@ export default function DashboardShell({ children, businessName, botNumber, clie
                 </div>
                 <div>
                   <h4 className="font-extrabold text-sm tracking-tight font-sans">Trial Account Active</h4>
-                  <p className="text-xs font-semibold opacity-90">Your ScaleCraft Agent is on a 7-day trial. You have <span className="font-extrabold text-[#1b5e20]">{remainingText}</span> remaining. Upgrade today to ensure uninterrupted automated service.</p>
+                  <p className="text-xs font-semibold opacity-90">Your WhatsApp Agent is on a 7-day trial. You have <span className="font-extrabold text-[#1b5e20]">{remainingText}</span> remaining. Upgrade today to ensure uninterrupted automated service.</p>
                 </div>
               </div>
               <a href="/upgrade" className="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl text-xs font-black transition-all hover:scale-[1.03] active:scale-95 shadow-md uppercase tracking-wider shrink-0">

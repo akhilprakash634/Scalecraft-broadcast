@@ -89,6 +89,26 @@ export async function GET() {
 
     const replies = (leadsData || []).reduce((sum, lead) => sum + (lead.user_messages || 0), 0);
 
+    // 5. Connection Status
+    let whatsappStatus = 'Not Connected';
+    if (client.whatsappAccessToken && client.whatsappPhoneNumberId) {
+      whatsappStatus = 'Connected';
+    }
+
+    // 6. Recent Conversations (from leads_cache)
+    const { data: recentLeads } = await supabaseAdmin
+      .from('leads_cache')
+      .select('name, phone, summary, last_message_at')
+      .in('client_id', clientIds)
+      .order('last_message_at', { ascending: false })
+      .limit(5);
+
+    const recentConversations = (recentLeads || []).map(lead => ({
+      customer: lead.name && /[a-zA-Z]/.test(lead.name) ? lead.name : lead.phone,
+      lastMessage: lead.summary ? lead.summary.substring(0, 50) + (lead.summary.length > 50 ? '...' : '') : 'Active conversation',
+      time: lead.last_message_at
+    }));
+
     return NextResponse.json({
       stats: {
         totalContacts,
@@ -98,7 +118,9 @@ export async function GET() {
         read,
         failed,
         replies,
-      }
+      },
+      whatsappStatus,
+      recentConversations,
     });
 
   } catch (error: any) {

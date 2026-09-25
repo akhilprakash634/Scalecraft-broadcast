@@ -213,7 +213,7 @@ export default function ResetPasswordPage() {
       {/* Brand Header */}
       <div className="text-center mb-8">
         <h1 className="text-3xl font-extrabold text-[#111110] tracking-tight uppercase font-heading">
-          ScaleCraft<span className="text-[#1B5E20]">.</span>
+          WhatsApp Platform<span className="text-[#1B5E20]">.</span>
         </h1>
         <p className="text-xs uppercase tracking-widest text-[#6F6E69] font-semibold mt-1">
           SaaS Client Control Portal

@@ -4,8 +4,8 @@ import { verifyJWT } from '@/lib/jwt';
 import DashboardShell from './DashboardShell';
 
 export const metadata = {
-  title: 'ScaleCraft Client Dashboard',
-  description: 'Manage your ScaleCraft WhatsApp sales agent from a premium SaaS dashboard.',
+  title: 'WhatsApp Business Platform Dashboard',
+  description: 'Manage your WhatsApp sales agent from a premium SaaS dashboard.',
 };
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
