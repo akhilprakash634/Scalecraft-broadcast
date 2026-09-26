@@ -63,21 +63,47 @@ export async function POST(request: Request) {
     const CHUNK_SIZE = 100;
     for (let i = 0; i < payloadBatch.length; i += CHUNK_SIZE) {
       const chunk = payloadBatch.slice(i, i + CHUNK_SIZE);
-      const { data, error } = await supabaseAdmin
-        .from('contacts')
-        .upsert(chunk, { onConflict: 'client_id,phone' })
-        .select();
-
-      if (error) {
-        console.error('[Contacts Import] Chunk Upsert Error:', error.message);
-        throw error;
-      }
       
-      if (data) {
-        importedCount += data.length;
+      const phonesInChunk = chunk.map(c => c.phone);
+      const { data: existingContacts, error: fetchErr } = await supabaseAdmin
+        .from('contacts')
+        .select('id, phone, group_tags')
+        .eq('client_id', client.clientId)
+        .in('phone', phonesInChunk);
+
+      if (fetchErr) throw fetchErr;
+
+      const existingMap = new Map((existingContacts || []).map(c => [c.phone, c]));
+
+      const toInsert = [];
+      const toUpdate = [];
+
+      for (const row of chunk) {
+        if (existingMap.has(row.phone)) {
+          const existing = existingMap.get(row.phone)!;
+          const combinedTags = Array.from(new Set([...(existing.group_tags || []), ...(row.group_tags || [])]));
+          toUpdate.push({
+            id: existing.id,
+            name: row.name || undefined, // don't overwrite with null if they had a name
+            group_tags: combinedTags,
+            imported_at: row.imported_at,
+          });
+        } else {
+          toInsert.push(row);
+        }
+      }
+
+      if (toInsert.length > 0) {
+        const { error: insertErr } = await supabaseAdmin.from('contacts').insert(toInsert);
+        if (insertErr) throw insertErr;
+        importedCount += toInsert.length;
+      }
+
+      for (const upd of toUpdate) {
+        const { error: updErr } = await supabaseAdmin.from('contacts').update(upd).eq('id', upd.id);
+        if (updErr) console.error('Failed to update contact:', updErr);
       }
     }
-
     // Duplicate count calculation
     duplicateCount = payloadBatch.length - importedCount;
 

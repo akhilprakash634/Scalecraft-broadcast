@@ -296,19 +296,54 @@ export async function POST(request: Request) {
       }
     }
 
-    // Trigger next batch if there's more to do
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.headers.get('origin') || 'http://localhost:3000';
-    if (successCount > 0) {
-      fetch(`${baseUrl}/api/cron/process-campaigns`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          campaign_id, 
-          template_components,
-          template_var_mapping,
-          image_url
-        })
-      }).catch(err => console.error('Failed to trigger next batch:', err.message));
+    // Check if we just processed the final batch
+    if (pendingRecipients.length < 100) {
+      // Mark campaign completed
+      await supabaseAdmin
+        .from('whatsapp_campaigns')
+        .update({ status: 'completed', updated_at: new Date().toISOString() })
+        .eq('id', campaign_id);
+
+      // Check if rotation is complete
+      const { data: rotations } = await supabaseAdmin
+        .from('whatsapp_broadcast_rotation_recipients')
+        .select('rotation_id')
+        .eq('campaign_id', campaign_id)
+        .limit(1);
+        
+      if (rotations && rotations.length > 0) {
+        const rotationId = rotations[0].rotation_id;
+        // Count unused eligible contacts
+        const { count: totalContacts } = await supabaseAdmin.from('whatsapp_contacts')
+          .select('id', { count: 'exact', head: true })
+          .eq('business_id', campaign.business_id)
+          .eq('status', 'active');
+          
+        const { count: usedContacts } = await supabaseAdmin.from('whatsapp_broadcast_rotation_recipients')
+          .select('id', { count: 'exact', head: true })
+          .eq('rotation_id', rotationId);
+          
+        if (totalContacts !== null && usedContacts !== null && usedContacts >= totalContacts) {
+          await supabaseAdmin.from('whatsapp_broadcast_rotations')
+            .update({ status: 'completed', completed_at: new Date().toISOString() })
+            .eq('id', rotationId);
+        }
+      }
+    } else {
+      // Trigger next batch if there's more to do
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.headers.get('origin') || 'http://localhost:3000';
+      if (successCount > 0) {
+        fetch(`${baseUrl}/api/cron/process-campaigns`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            campaign_id, 
+            template_components,
+            template_var_mapping,
+            image_url
+          })
+        }).catch(err => console.error('Failed to trigger next batch:', err.message));
+      }
     }
 
     return NextResponse.json({ success: true, processed: pendingRecipients.length });
