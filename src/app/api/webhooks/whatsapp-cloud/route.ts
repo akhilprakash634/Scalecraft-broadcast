@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     if (phoneNumberId) {
       const { data } = await supabaseAdmin
         .from('agent_clients')
-        .select('id, whatsapp_access_token')
+        .select('id, whatsapp_access_token, flow_auto_start, flow_auto_start_message, flow_auto_start_id')
         .eq('whatsapp_phone_number_id', phoneNumberId)
         .single();
       if (data) {
@@ -225,6 +225,15 @@ export async function POST(request: Request) {
                if (flowSub) {
                  flowSubmissionId = flowSub.id;
                  contentStr = `[flow_submission:${flowSub.id}|${flowName}|${refNumber}]`;
+                 
+                 // Mark session as completed
+                 await supabaseAdmin.from('whatsapp_flow_sessions').update({ 
+                   status: 'completed', 
+                   completed_at: timestampStr 
+                 })
+                 .eq('business_id', clientId)
+                 .eq('contact_id', contact!.id)
+                 .eq('status', 'active');
                } else {
                  contentStr = `Flow Submitted: ${flowName}`;
                }
@@ -301,6 +310,101 @@ export async function POST(request: Request) {
                 last_message_at: timestampStr,
                 unread_count: (conversation!.unread_count || 0) + 1
               }).eq('id', conversation!.id);
+            }
+
+            // --- Flow Auto-Start Logic ---
+            // @ts-ignore (data is from top level)
+            if (data?.flow_auto_start && data?.flow_auto_start_id) {
+              // Only start if it's a normal message, not an interactive reply
+              if (msg.type !== 'interactive') {
+                // Check for active flow session
+                const { data: activeSession } = await supabaseAdmin
+                  .from('whatsapp_flow_sessions')
+                  .select('id')
+                  .eq('business_id', clientId)
+                  .eq('contact_id', contact!.id)
+                  .eq('status', 'active')
+                  .maybeSingle();
+
+                if (!activeSession) {
+                  // Send welcome message with flow button
+                  const flowToken = `FT-${contact!.id}-${Date.now()}`;
+                  // @ts-ignore
+                  const welcomeMsg = data.flow_auto_start_message || 'Hi 👋 Welcome! How can we help you today?';
+                  
+                  const metaPayload = {
+                    messaging_product: 'whatsapp',
+                    recipient_type: 'individual',
+                    to: fromPhone,
+                    type: 'interactive',
+                    interactive: {
+                      type: 'flow',
+                      header: {
+                        type: 'text',
+                        text: 'Welcome'
+                      },
+                      body: {
+                        text: welcomeMsg
+                      },
+                      footer: {
+                        text: 'Powered by ScaleCraft'
+                      },
+                      action: {
+                        name: 'flow',
+                        parameters: {
+                          flow_message_version: '3',
+                          flow_token: flowToken,
+                          // @ts-ignore
+                          flow_id: data.flow_auto_start_id,
+                          flow_cta: 'Start Flow',
+                          flow_action: 'navigate'
+                        }
+                      }
+                    }
+                  };
+
+                  const metaRes = await fetch(`https://graph.facebook.com/v20.0/${phoneNumberId}/messages`, {
+                    method: 'POST',
+                    headers: {
+                      'Authorization': `Bearer ${whatsappToken}`,
+                      'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(metaPayload)
+                  });
+
+                  if (metaRes.ok) {
+                    const metaResData = await metaRes.json();
+                    const outMsgId = metaResData.messages?.[0]?.id;
+                    
+                    // Log message
+                    await supabaseAdmin.from('whatsapp_messages').insert({
+                      business_id: clientId,
+                      conversation_id: conversation!.id,
+                      contact_id: contact!.id,
+                      direction: 'outgoing',
+                      message_type: 'interactive',
+                      content: `[Flow Invite Sent] ${welcomeMsg}`,
+                      whatsapp_message_id: outMsgId,
+                      status: 'sent',
+                      created_at: new Date().toISOString()
+                    });
+
+                    // Create session
+                    await supabaseAdmin.from('whatsapp_flow_sessions').insert({
+                      business_id: clientId,
+                      contact_id: contact!.id,
+                      conversation_id: conversation!.id,
+                      phone_number: fromPhone,
+                      // @ts-ignore
+                      flow_id: data.flow_auto_start_id,
+                      flow_token: flowToken,
+                      status: 'active'
+                    });
+                  } else {
+                     console.error('Failed to send auto-start flow:', await metaRes.text());
+                  }
+                }
+              }
             }
           }
         }

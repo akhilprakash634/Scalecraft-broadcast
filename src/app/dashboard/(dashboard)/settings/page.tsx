@@ -36,6 +36,14 @@ export default function SettingsPage() {
   const [submittingBusiness, setSubmittingBusiness] = useState(false);
   const [businessSuccess, setBusinessSuccess] = useState('');
 
+  // Flow Auto-Start Form
+  const [flowAutoStart, setFlowAutoStart] = useState(false);
+  const [flowAutoStartMessage, setFlowAutoStartMessage] = useState('Hi 👋 Welcome! How can we help you today?');
+  const [flowAutoStartId, setFlowAutoStartId] = useState('');
+  const [submittingFlowAutoStart, setSubmittingFlowAutoStart] = useState(false);
+  const [flowAutoStartSuccess, setFlowAutoStartSuccess] = useState('');
+  const [availableFlows, setAvailableFlows] = useState<any[]>([]);
+
   const [webhookUrl, setWebhookUrl] = useState('Loading...');
   const verifyToken = client?.whatsappVerifyToken || (client?.hermesProfile ? `${client.hermesProfile}-webhook-token` : '');
 
@@ -56,6 +64,9 @@ export default function SettingsPage() {
         setCloudPhoneId(data.whatsappPhoneNumberId || '');
         setCloudWabaId(data.whatsappWabaId || '');
         setCloudAppSecret(data.whatsappAppSecret ? '••••••••••••••••' : '');
+        setFlowAutoStart(data.flow_auto_start || false);
+        setFlowAutoStartMessage(data.flow_auto_start_message || 'Hi 👋 Welcome! How can we help you today?');
+        setFlowAutoStartId(data.flow_auto_start_id || '');
       }
     } catch (err) {
       console.error('Failed to load client profile:', err);
@@ -64,8 +75,24 @@ export default function SettingsPage() {
     }
   };
 
+  const fetchFlows = async () => {
+    try {
+      const res = await fetch('/api/dashboard/flows');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.flows) {
+          // Only show published flows
+          setAvailableFlows(data.flows.filter((f: any) => f.status === 'PUBLISHED'));
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch flows:', err);
+    }
+  };
+
   useEffect(() => {
     fetchClientProfile();
+    fetchFlows();
   }, []);
 
   const handleConfigureCloudApi = async (e: React.FormEvent) => {
@@ -114,6 +141,33 @@ export default function SettingsPage() {
       alert(err.message);
     } finally {
       setSubmittingBusiness(false);
+    }
+  };
+
+  const handleUpdateFlowAutoStart = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmittingFlowAutoStart(true);
+    setFlowAutoStartSuccess('');
+    try {
+      const payload = {
+        flow_auto_start: flowAutoStart,
+        flow_auto_start_message: flowAutoStartMessage,
+        flow_auto_start_id: flowAutoStartId
+      };
+
+      const res = await fetch('/api/dashboard/client', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('Failed to update Flow Auto-Start settings');
+      
+      setFlowAutoStartSuccess('Flow Auto-Start updated successfully');
+      await fetchClientProfile();
+    } catch (err: any) {
+      console.error(err);
+    } finally {
+      setSubmittingFlowAutoStart(false);
     }
   };
 
@@ -321,6 +375,76 @@ export default function SettingsPage() {
               disabled={submittingBusiness}
             >
               Save Profile
+            </Button>
+          </form>
+        </Card>
+
+        <Card padding="lg" className="space-y-6">
+          <div className="flex items-center gap-3 border-b border-border pb-4">
+            <MessageSquare className="text-text-secondary" size={20} />
+            <h2 className="text-sm font-bold text-text-primary">Flow Auto-Start</h2>
+          </div>
+          <form onSubmit={handleUpdateFlowAutoStart} className="space-y-5">
+            <div className="space-y-1.5 flex items-center justify-between">
+              <label className="text-[10px] font-black text-text-muted uppercase tracking-wider">
+                Enable Auto-Start
+              </label>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={flowAutoStart}
+                  onChange={(e) => setFlowAutoStart(e.target.checked)}
+                />
+                <div className="w-9 h-5 bg-border rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand"></div>
+              </label>
+            </div>
+            
+            {flowAutoStart && (
+              <>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-text-muted uppercase tracking-wider">
+                    Welcome Message
+                  </label>
+                  <textarea
+                    value={flowAutoStartMessage}
+                    onChange={(e) => setFlowAutoStartMessage(e.target.value)}
+                    rows={2}
+                    className="w-full text-xs border border-border bg-white dark:bg-surface-0 rounded-lg p-2.5 outline-none focus:border-brand resize-none"
+                    placeholder="Hi 👋 Welcome! How can we help you today?"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-text-muted uppercase tracking-wider">
+                    Select Flow
+                  </label>
+                  <select
+                    value={flowAutoStartId}
+                    onChange={(e) => setFlowAutoStartId(e.target.value)}
+                    className="w-full text-xs border border-border bg-white dark:bg-surface-0 rounded-lg p-2.5 outline-none focus:border-brand"
+                  >
+                    <option value="">-- Select a Published Flow --</option>
+                    {availableFlows.map(f => (
+                      <option key={f.id} value={f.id}>{f.name} ({f.id})</option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
+
+            {flowAutoStartSuccess && (
+              <div className="text-xs font-semibold text-success flex items-center gap-2">
+                <CheckCircle size={14} /> {flowAutoStartSuccess}
+              </div>
+            )}
+            <Button
+              variant="primary"
+              size="md"
+              type="submit"
+              loading={submittingFlowAutoStart}
+              disabled={submittingFlowAutoStart}
+            >
+              Save Auto-Start Settings
             </Button>
           </form>
         </Card>

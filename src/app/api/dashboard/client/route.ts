@@ -154,6 +154,9 @@ export async function GET() {
       metaLimitExpiresAt,
       metaThroughputLimit,
       googleOauth,
+      flow_auto_start: clientRecord.flow_auto_start || false,
+      flow_auto_start_message: clientRecord.flow_auto_start_message || 'Hi 👋 Welcome! How can we help you today?',
+      flow_auto_start_id: clientRecord.flow_auto_start_id || null,
     });
   } catch (error: any) {
     console.error('Client Profile GET Error:', error.message);
@@ -168,7 +171,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { geminiApiKey, googleSheetId, timezone, autoFollowUpEnabled } = await request.json();
+    const { geminiApiKey, googleSheetId, timezone, autoFollowUpEnabled, flow_auto_start, flow_auto_start_message, flow_auto_start_id } = await request.json();
     const patchData: any = {};
 
     if (geminiApiKey !== undefined && geminiApiKey.trim() !== '') {
@@ -177,6 +180,16 @@ export async function PATCH(request: Request) {
 
     if (googleSheetId !== undefined) {
       patchData.googleSheetId = googleSheetId.trim();
+    }
+
+    if (flow_auto_start !== undefined) {
+      patchData.flow_auto_start = flow_auto_start;
+    }
+    if (flow_auto_start_message !== undefined) {
+      patchData.flow_auto_start_message = flow_auto_start_message.trim();
+    }
+    if (flow_auto_start_id !== undefined) {
+      patchData.flow_auto_start_id = flow_auto_start_id;
     }
 
     if (timezone !== undefined && timezone.trim() !== '') {
@@ -219,6 +232,15 @@ export async function PATCH(request: Request) {
     }
     if (patchData.typeSpecificData !== undefined) {
       mappedPatchData.type_specific_data = patchData.typeSpecificData;
+    }
+    if (patchData.flow_auto_start !== undefined) {
+      mappedPatchData.flow_auto_start = patchData.flow_auto_start;
+    }
+    if (patchData.flow_auto_start_message !== undefined) {
+      mappedPatchData.flow_auto_start_message = patchData.flow_auto_start_message;
+    }
+    if (patchData.flow_auto_start_id !== undefined) {
+      mappedPatchData.flow_auto_start_id = patchData.flow_auto_start_id;
     }
     await updateClient(clientRecord._id, mappedPatchData);
 
