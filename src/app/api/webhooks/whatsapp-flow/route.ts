@@ -88,11 +88,11 @@ export async function POST(request: Request) {
     }
 
     // Log the request server-side
-    console.log('\n--- FLOW REQUEST ---');
-    console.log(`action: ${decryptedData.action}`);
-    console.log(`screen: ${decryptedData.screen}`);
-    console.log('data:', decryptedData.data || {});
-    console.log('--------------------\n');
+    console.log('\n--- FLOW HEALTH CHECK ---');
+    console.log(`action: ${decryptedData.action || 'N/A'}`);
+    console.log(`screen: ${decryptedData.screen || 'N/A'}`);
+    console.log(`flow_token: ${decryptedData.flow_token || 'N/A'}`);
+    console.log('-------------------------\n');
 
     // 3. Prepare Response
     const { action, screen, data, flow_token } = decryptedData;
