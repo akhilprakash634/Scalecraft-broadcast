@@ -114,6 +114,83 @@ export async function POST(request: Request) {
           error: `Invalid custom numbers:\n${invalidCustom.join('\n')}`
         }, { status: 400 });
       }
+    } else if (targetAudience === 'rotation') {
+      const bSize = batchSize ? parseInt(batchSize, 10) : 250;
+      
+      // 1. Get active rotation
+      const { data: activeRotation } = await supabaseAdmin
+        .from('whatsapp_broadcast_rotations')
+        .select('*')
+        .eq('business_id', clientId)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (!activeRotation) {
+        return NextResponse.json({ error: 'No active rotation found. Please start a new rotation first.' }, { status: 400 });
+      }
+
+      // 2. Fetch used contacts for this rotation
+      const { data: usedRecords } = await supabaseAdmin
+        .from('whatsapp_broadcast_rotation_recipients')
+        .select('contact_id')
+        .eq('rotation_id', activeRotation.id);
+      
+      const usedIds = new Set((usedRecords || []).map(r => r.contact_id));
+
+      // 3. Fetch all active contacts
+      const { data: allContacts } = await supabaseAdmin
+        .from('whatsapp_contacts')
+        .select('id, normalized_phone')
+        .eq('business_id', clientId)
+        .eq('status', 'active');
+
+      if (!allContacts) {
+        return NextResponse.json({ error: 'No active contacts found.' }, { status: 400 });
+      }
+
+      // 4. Filter to unused
+      const unusedContacts = allContacts.filter(c => !usedIds.has(c.id));
+      
+      if (unusedContacts.length === 0) {
+        return NextResponse.json({ error: 'All eligible customers have been used in the current rotation. Please complete it and start a new one.' }, { status: 400 });
+      }
+
+      // 5. Take exactly the batch size
+      const batchContacts = unusedContacts.slice(0, bSize);
+      
+      // Because we must ensure ATOMIC selection to avoid two concurrent campaigns overlapping,
+      // we insert them into the `whatsapp_broadcast_rotation_recipients` right now without campaign_id.
+      // If it succeeds, they are reserved. If someone else took them simultaneously, `ignoreDuplicates` will ignore them.
+      
+      const reservePayload = batchContacts.map(c => ({
+        rotation_id: activeRotation.id,
+        business_id: clientId,
+        contact_id: c.id,
+        status: 'pending' // Just reserving for now
+      }));
+
+      const { data: insertedReserves, error: reserveError } = await supabaseAdmin
+        .from('whatsapp_broadcast_rotation_recipients')
+        .upsert(reservePayload, { onConflict: 'rotation_id,contact_id', ignoreDuplicates: true })
+        .select('id, contact_id');
+
+      if (reserveError) {
+        console.error('Reservation error:', reserveError);
+        return NextResponse.json({ error: 'Failed to reserve contacts for rotation' }, { status: 500 });
+      }
+      
+      const successfullyReservedIds = new Set((insertedReserves || []).map(r => r.contact_id));
+      const finalizedContacts = batchContacts.filter(c => successfullyReservedIds.has(c.id));
+
+      if (finalizedContacts.length === 0) {
+        return NextResponse.json({ error: 'Failed to reserve any contacts. Another broadcast might be running simultaneously.' }, { status: 409 });
+      }
+
+      // Store the mapping so we can attach campaign_id later
+      (request as any).reservedRotations = insertedReserves;
+      (request as any).activeRotationId = activeRotation.id;
+      
+      phoneList = finalizedContacts.map(c => c.normalized_phone).filter(Boolean) as string[];
     } else {
       // In a real scenario you would query contacts table based on tags. 
       // For now, if it's 'all' we fetch all from whatsapp_contacts
@@ -178,6 +255,19 @@ export async function POST(request: Request) {
           status: 'pending'
         }));
         await supabaseAdmin.from('whatsapp_campaign_recipients').insert(chunkRecipients);
+        
+        // If this was a rotation campaign, also attach campaign_id to the rotation records
+        const reservedList: any[] = (request as any).reservedRotations;
+        if (reservedList && reservedList.length > 0) {
+           const contactIdsInChunk = new Set(insertedContacts.map(c => c.id));
+           const reservedToUpdate = reservedList.filter(r => contactIdsInChunk.has(r.contact_id));
+           if (reservedToUpdate.length > 0) {
+             const reservedIds = reservedToUpdate.map(r => r.id);
+             await supabaseAdmin.from('whatsapp_broadcast_rotation_recipients')
+               .update({ campaign_id: campaign.id })
+               .in('id', reservedIds);
+           }
+        }
       }
     }
 

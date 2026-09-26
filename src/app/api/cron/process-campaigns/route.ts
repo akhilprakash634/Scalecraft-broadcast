@@ -45,6 +45,32 @@ export async function POST(request: Request) {
         .update({ status: 'completed', updated_at: new Date().toISOString() })
         .eq('id', campaign_id);
       
+      // Check if rotation is complete
+      const { data: rotations } = await supabaseAdmin
+        .from('whatsapp_broadcast_rotation_recipients')
+        .select('rotation_id')
+        .eq('campaign_id', campaign_id)
+        .limit(1);
+        
+      if (rotations && rotations.length > 0) {
+        const rotationId = rotations[0].rotation_id;
+        // Count unused eligible contacts
+        const { count: totalContacts } = await supabaseAdmin.from('whatsapp_contacts')
+          .select('id', { count: 'exact', head: true })
+          .eq('business_id', campaign.business_id)
+          .eq('status', 'active');
+          
+        const { count: usedContacts } = await supabaseAdmin.from('whatsapp_broadcast_rotation_recipients')
+          .select('id', { count: 'exact', head: true })
+          .eq('rotation_id', rotationId);
+          
+        if (totalContacts !== null && usedContacts !== null && usedContacts >= totalContacts) {
+          await supabaseAdmin.from('whatsapp_broadcast_rotations')
+            .update({ status: 'completed', completed_at: new Date().toISOString() })
+            .eq('id', rotationId);
+        }
+      }
+
       return NextResponse.json({ success: true, message: 'Campaign completed' });
     }
 
@@ -221,6 +247,16 @@ export async function POST(request: Request) {
             .eq('id', rec.id);
             
           if (updateError) console.error('Failed to update recipient to sent:', updateError);
+          
+          // Update rotation recipient to sent
+          await supabaseAdmin.from('whatsapp_broadcast_rotation_recipients')
+            .update({
+              status: 'sent',
+              sent_at: new Date().toISOString(),
+              message_id: newMessage?.id || null
+            })
+            .eq('campaign_id', campaign.id).eq('contact_id', rec.contact_id);
+
           successCount++;
         } else {
           // Update failed
@@ -234,6 +270,11 @@ export async function POST(request: Request) {
             .eq('id', rec.id);
             
           if (failError) console.error('Failed to update recipient to failed:', failError);
+          
+          // Delete rotation recipient so they remain eligible for this rotation
+          await supabaseAdmin.from('whatsapp_broadcast_rotation_recipients')
+            .delete()
+            .eq('campaign_id', campaign.id).eq('contact_id', rec.contact_id);
         }
 
         // Delay to respect rate limits (basic)
@@ -247,6 +288,11 @@ export async function POST(request: Request) {
             error_message: err.message
           })
           .eq('id', rec.id);
+
+        // Delete rotation recipient so they remain eligible for this rotation
+        await supabaseAdmin.from('whatsapp_broadcast_rotation_recipients')
+          .delete()
+          .eq('campaign_id', campaign.id).eq('contact_id', rec.contact_id);
       }
     }
 

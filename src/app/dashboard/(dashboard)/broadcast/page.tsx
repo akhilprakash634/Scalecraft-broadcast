@@ -121,7 +121,9 @@ export default function BroadcastPage() {
   // REGULAR BROADCAST STATE & FUNCTIONS
   // ==========================================
   const [message, setMessage] = useState('');
-  const [targetAudience, setTargetAudience] = useState<'all' | 'followup' | 'custom' | 'contact_group'>('all');
+  const [targetAudience, setTargetAudience] = useState<'all' | 'followup' | 'custom' | 'contact_group' | 'rotation'>('all');
+  const [rotationStats, setRotationStats] = useState<any>(null);
+  const [fetchingRotation, setFetchingRotation] = useState(false);
   const [batchSize, setBatchSize] = useState('1000');
   const [groupTag, setGroupTag] = useState('');
   const [contacts, setContacts] = useState<any[]>([]);
@@ -232,6 +234,34 @@ export default function BroadcastPage() {
       }
     } catch { }
     return [];
+  };
+
+  const fetchRotationData = async () => {
+    setFetchingRotation(true);
+    try {
+      const res = await fetch('/api/dashboard/broadcast/rotations');
+      const data = await res.json();
+      if (data.success) {
+        setRotationStats(data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    setFetchingRotation(false);
+  };
+
+  const startNewRotation = async () => {
+    try {
+      const res = await fetch('/api/dashboard/broadcast/rotations', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        await fetchRotationData();
+      } else {
+        setError(data.error || 'Failed to start new rotation');
+      }
+    } catch (e) {
+      setError('Network error starting rotation');
+    }
   };
 
   const fetchClient = async () => {
@@ -549,6 +579,11 @@ export default function BroadcastPage() {
   };
 
   const getTargetLeadsCount = () => {
+    if (targetAudience === 'rotation') {
+      if (!rotationStats) return 0;
+      const bSize = parseInt(batchSize, 10) || 0;
+      return Math.min(rotationStats.remaining_in_rotation, bSize);
+    }
     if (targetAudience === 'custom') {
       return cleanCustomNumbers().length;
     }
@@ -1626,8 +1661,9 @@ export default function BroadcastPage() {
                 {/* Target Audience */}
                 <div className="space-y-2">
                   <span className="block text-[10px] font-black text-text-muted uppercase tracking-wider">Target Audience</span>
-                  <div className="grid grid-cols-4 gap-2 text-[10px] font-bold uppercase tracking-wider text-center">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-[10px] font-bold uppercase tracking-wider text-center">
                     {[
+                      { id: 'rotation', label: 'Rotation' },
                       { id: 'followup', label: 'Follow-ups' },
                       { id: 'all', label: 'All Active' },
                       { id: 'contact_group', label: 'Contact Group' },
@@ -1641,7 +1677,9 @@ export default function BroadcastPage() {
                           if (aud.id === 'contact_group' && !contactsLoaded) {
                             await fetchContacts();
                             setContactsLoaded(true);
-                          } else if (aud.id !== 'custom' && !leadsLoaded) {
+                          } else if (aud.id === 'rotation' && !rotationStats) {
+                            await fetchRotationData();
+                          } else if (aud.id !== 'custom' && aud.id !== 'rotation' && !leadsLoaded) {
                             await fetchLeads();
                             setLeadsLoaded(true);
                           }
@@ -1698,10 +1736,48 @@ export default function BroadcastPage() {
                     </div>
                   )}
 
-                  {(targetAudience === 'all' || targetAudience === 'contact_group') && (
+                  {targetAudience === 'rotation' && rotationStats && (
+                    <div className="pt-2 animate-fadeIn space-y-3">
+                      <div className="bg-brand-light/20 border border-brand/20 rounded-xl p-4 text-xs">
+                        <div className="flex justify-between items-center mb-3 pb-3 border-b border-brand/10">
+                          <div className="font-black text-text-primary uppercase tracking-wider">
+                            Current Rotation: <span className="text-brand">#{rotationStats.active_rotation?.cycle_number || '-'}</span>
+                          </div>
+                          {rotationStats.active_rotation && (
+                            <span className="bg-success-bg text-success px-2 py-0.5 rounded font-black text-[9px] uppercase">Active</span>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-3 gap-4 mb-4">
+                          <div>
+                            <span className="block text-[10px] text-text-muted font-bold uppercase">Total Eligible</span>
+                            <span className="block text-sm font-black font-mono">{rotationStats.total_eligible}</span>
+                          </div>
+                          <div>
+                            <span className="block text-[10px] text-text-muted font-bold uppercase">Already Used</span>
+                            <span className="block text-sm font-black font-mono">{rotationStats.used_in_rotation}</span>
+                          </div>
+                          <div>
+                            <span className="block text-[10px] text-brand-dark font-bold uppercase">Remaining</span>
+                            <span className="block text-sm font-black font-mono text-brand">{rotationStats.remaining_in_rotation}</span>
+                          </div>
+                        </div>
+
+                        {!rotationStats.active_rotation || rotationStats.remaining_in_rotation === 0 ? (
+                          <div className="bg-white p-3 rounded-lg border border-warning text-center space-y-2">
+                            <p className="text-[11px] text-warning-dark font-bold">Current customer rotation completed (0 remaining). Start a new rotation to contact these customers again.</p>
+                            <Button variant="primary" size="sm" onClick={startNewRotation}>
+                              Start Rotation #{rotationStats.active_rotation ? rotationStats.active_rotation.cycle_number + 1 : 1}
+                            </Button>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  )}
+
+                  {(targetAudience === 'all' || targetAudience === 'contact_group' || targetAudience === 'rotation') && (
                     <div className="pt-2 animate-fadeIn space-y-1.5">
                       <label htmlFor="batch-size" className="block text-[9px] font-black text-text-muted uppercase tracking-wider">
-                        Recipients per broadcast (Batch Size)
+                        Maximum recipients (Batch Size)
                       </label>
                       <select
                         id="batch-size"
@@ -2335,6 +2411,11 @@ export default function BroadcastPage() {
                         <Badge variant="info" size="sm">
                           {camp.job_type === 'cold_outreach' ? 'Cold outreach' : 'Regular broadcast'}
                         </Badge>
+                        {camp.rotationCycle != null && (
+                          <Badge variant="warning" size="sm">
+                            Rotation #{camp.rotationCycle}
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-xs text-text-muted font-semibold leading-relaxed truncate max-w-lg">
                         {camp.message || 'Custom split testing templates'}

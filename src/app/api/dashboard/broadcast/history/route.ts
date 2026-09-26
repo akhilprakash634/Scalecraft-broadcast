@@ -36,6 +36,21 @@ export async function GET() {
       .select('campaign_id, status')
       .in('campaign_id', campaignIds);
 
+    const { data: rotationRecipients } = await supabaseAdmin
+      .from('whatsapp_broadcast_rotation_recipients')
+      .select('campaign_id, whatsapp_broadcast_rotations(cycle_number)')
+      .in('campaign_id', campaignIds);
+
+    const rotationMap: Record<string, number> = {};
+    if (rotationRecipients) {
+      for (const r of rotationRecipients) {
+        const rot = r.whatsapp_broadcast_rotations as any;
+        if (r.campaign_id && rot?.cycle_number) {
+          rotationMap[r.campaign_id] = rot.cycle_number;
+        }
+      }
+    }
+
     const statsMap: Record<string, { sent: number; delivered: number; read: number; failed: number }> = {};
     for (const id of campaignIds) {
       statsMap[id] = { sent: 0, delivered: 0, read: 0, failed: 0 };
@@ -85,6 +100,7 @@ export async function GET() {
         completed_at: c.updated_at || c.created_at,
         completedAt: c.updated_at || c.created_at,
         message: c.name || 'Custom',
+        rotationCycle: rotationMap[c.id] || null,
         statusCounts: counts,
       };
     });
