@@ -187,12 +187,48 @@ export async function POST(request: Request) {
               conversation = newConv;
             }
 
-            // 3. Process media if any
+            // 3. Process media and flows if any
             let contentStr = '';
             let mediaUrl = null;
+            let flowSubmissionId = null;
+
             if (msg.type === 'text') {
               contentStr = msg.text.body;
-            } else {
+            } else if (msg.type === 'interactive' && msg.interactive?.type === 'nfm_reply') {
+               const nfmReply = msg.interactive.nfm_reply;
+               let responseData = {};
+               try {
+                 if (nfmReply.response_json) {
+                   responseData = JSON.parse(nfmReply.response_json);
+                 }
+               } catch (e) {
+                 console.error('Failed to parse flow response json', e);
+               }
+               
+               const flowName = nfmReply.name || 'Flow Submission';
+               // Generate a unique reference number
+               const refNumber = `FLOW-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`;
+               
+               // Save to whatsapp_flow_submissions
+               const { data: flowSub } = await supabaseAdmin.from('whatsapp_flow_submissions').insert({
+                 business_id: clientId,
+                 flow_id: nfmReply.name || 'unknown',
+                 flow_name: flowName,
+                 phone_number: fromPhone,
+                 contact_id: contact!.id,
+                 message_id: wamid, // Idempotency check via UNIQUE constraint
+                 response_data: responseData,
+                 reference_number: refNumber,
+                 raw_payload: msg
+               }).select('id').single();
+
+               if (flowSub) {
+                 flowSubmissionId = flowSub.id;
+                 contentStr = `[flow_submission:${flowSub.id}|${flowName}|${refNumber}]`;
+               } else {
+                 contentStr = `Flow Submitted: ${flowName}`;
+               }
+            } else if (msg.type !== 'text') {
                const mediaObj = msg[msg.type];
                if (mediaObj && mediaObj.id && whatsappToken) {
                  try {

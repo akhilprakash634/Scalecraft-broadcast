@@ -78,6 +78,7 @@ interface Lead {
   notes: string | null;
   productsDiscussed?: string[];
   followUpHistory?: any[];
+  flowActivity?: any[];
   manual_status: string | null;
   last_analyzed_at: string;
   updated_at: string;
@@ -478,6 +479,10 @@ function LeadsPageInner() {
           if (lastMsg.sender === 'agent') {
             setIsAgentTyping(false);
           }
+        }
+        
+        if (data.flowActivity) {
+          setLeads(prev => prev.map(l => l.phone === phone ? { ...l, flowActivity: data.flowActivity } : l));
         }
 
         if (!hasAlreadyLoaded) {
@@ -1620,6 +1625,36 @@ function LeadsPageInner() {
                         </div>
                       ))
                     }
+                  </div>
+                </div>
+              )}
+
+              {/* Flow Activity */}
+              {selectedLead.flowActivity && selectedLead.flowActivity.length > 0 && (
+                <div className="px-4 py-3 border-t border-[var(--color-border)]">
+                  <p className="text-[11px] font-semibold text-[var(--color-text-subtle)] uppercase tracking-wider mb-2">
+                    FLOW ACTIVITY
+                  </p>
+                  <div className="space-y-2">
+                    {selectedLead.flowActivity.map((activity: any, idx: number) => (
+                      <div key={idx} className="bg-surface-0 dark:bg-[#111B21] border border-border dark:border-[#2A3942] rounded-lg p-2.5">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-[11px] font-bold text-text-primary dark:text-foreground truncate mr-2">
+                            {activity.flow_name || 'Flow Form'}
+                          </span>
+                          <span className="text-[9px] text-text-muted dark:text-text-subtle whitespace-nowrap">
+                            {new Date(activity.submitted_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {Object.keys(activity.response_data || {}).slice(0, 3).map((key) => (
+                            <span key={key} className="text-[9px] bg-brand/5 text-brand dark:bg-brand/10 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                              {key.replace(/_/g, ' ')}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}

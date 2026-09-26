@@ -195,6 +195,24 @@ export default function ChatBubble({ message, isConsecutive = false, onRetry }: 
   };
 
   const renderContent = () => {
+    if (parsed.isFlow) {
+      return (
+        <div className="space-y-2 min-w-[240px]">
+          <div className="bg-black/5 dark:bg-white/5 rounded-lg border border-black/10 dark:border-white/10 p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <FileText size={16} className="text-[#00a884] dark:text-brand" />
+              <span className="font-bold text-xs uppercase tracking-wider text-text-primary dark:text-foreground">Flow Submitted</span>
+            </div>
+            <div className="font-semibold text-sm mb-1">{parsed.flowName}</div>
+            <div className="text-[10px] text-[#667781] font-mono">{parsed.flowRef}</div>
+          </div>
+          <a href={`/dashboard/flows`} className="block w-full text-center bg-[#00a884] dark:bg-brand hover:bg-[#008f6f] dark:hover:bg-brand-dark text-white px-3 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer">
+            View Submission
+          </a>
+        </div>
+      );
+    }
+
     if (!parsed.isMedia) {
       return <p className="whitespace-pre-wrap font-sans">{parsed.caption || ''}</p>;
     }

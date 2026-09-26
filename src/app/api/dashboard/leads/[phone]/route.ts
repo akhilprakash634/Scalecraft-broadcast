@@ -82,12 +82,20 @@ export async function GET(request: Request, segmentData: { params: Params }) {
       };
     });
 
+    // 4. Get Flow Submissions
+    const { data: flowActivity } = await supabaseAdmin
+      .from('whatsapp_flow_submissions')
+      .select('id, flow_name, submitted_at, response_data')
+      .eq('contact_id', contact.id)
+      .order('submitted_at', { ascending: false });
+
     return NextResponse.json({
       phone: contact.normalized_phone,
       name: contact.name || contact.phone,
       contact_id: contact.id,
       conversation_id: conversation.id,
-      messages: mappedMessages
+      messages: mappedMessages,
+      flowActivity: flowActivity || []
     });
 
   } catch (error: any) {

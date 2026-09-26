@@ -8,6 +8,10 @@ export interface ParsedMediaMessage {
   buttons?: string[];
   localPath?: string;
   quotedMessage?: string;
+  isFlow?: boolean;
+  flowId?: string;
+  flowName?: string;
+  flowRef?: string;
 }
 
 /**
@@ -180,6 +184,22 @@ export function parseMessageContent(text: string): ParsedMediaMessage {
           };
         }
       }
+    }
+  }
+
+  // 4. Process Flow Submission
+  if (workingText.startsWith('[flow_submission:')) {
+    const closeIndex = workingText.indexOf(']');
+    if (closeIndex !== -1) {
+      const parts = workingText.slice(17, closeIndex).split('|');
+      return {
+        isMedia: false,
+        isFlow: true,
+        flowId: parts[0] || '',
+        flowName: parts[1] || 'Flow Submission',
+        flowRef: parts[2] || '',
+        caption: workingText.slice(closeIndex + 1).trim()
+      };
     }
   }
 

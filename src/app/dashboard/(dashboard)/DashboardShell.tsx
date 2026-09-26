@@ -97,6 +97,7 @@ export default function DashboardShell({ children, businessName, botNumber, clie
     { name: 'Inbox', href: '/dashboard/leads', icon: MessageSquare, badge: pendingFollowupCount > 0 ? pendingFollowupCount : undefined },
     { name: 'Broadcast', href: '/dashboard/broadcast', icon: Megaphone },
     { name: 'Contacts', href: '/dashboard/contacts', icon: Users },
+    { name: 'Flows', href: '/dashboard/flows', icon: Package },
     { name: 'Settings', href: '/dashboard/settings', icon: Settings2 },
   ];
 
