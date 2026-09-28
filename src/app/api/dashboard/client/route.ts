@@ -171,8 +171,12 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { geminiApiKey, googleSheetId, timezone, autoFollowUpEnabled, flow_auto_start, flow_auto_start_message, flow_auto_start_id } = await request.json();
+    const { businessName, geminiApiKey, googleSheetId, timezone, autoFollowUpEnabled, flow_auto_start, flow_auto_start_message, flow_auto_start_id } = await request.json();
     const patchData: any = {};
+
+    if (businessName !== undefined && businessName.trim() !== '') {
+      patchData.businessName = businessName.trim();
+    }
 
     if (geminiApiKey !== undefined && geminiApiKey.trim() !== '') {
       patchData.geminiApiKey = geminiApiKey.trim();
@@ -221,6 +225,9 @@ export async function PATCH(request: Request) {
     // 1. Update in Supabase
     const { updateClient } = await import('@/lib/db');
     const mappedPatchData: any = {};
+    if (patchData.businessName !== undefined) {
+      mappedPatchData.business_name = patchData.businessName;
+    }
     if (patchData.geminiApiKey !== undefined) {
       mappedPatchData.gemini_api_key = patchData.geminiApiKey;
     }

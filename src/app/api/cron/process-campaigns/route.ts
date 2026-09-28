@@ -128,8 +128,11 @@ export async function POST(request: Request) {
         const metaComponents: any[] = [];
         if (template_components) {
           for (const comp of template_components) {
-            if (comp.type === 'HEADER' && comp.format === 'IMAGE' && image_url) {
-              metaComponents.push({ type: 'header', parameters: [{ type: 'image', image: { link: image_url } }] });
+            if (comp.type === 'HEADER' && comp.format === 'IMAGE') {
+              const urlToUse = image_url || comp.example?.header_handle?.[0] || comp.example?.header_url?.[0];
+              if (urlToUse) {
+                metaComponents.push({ type: 'header', parameters: [{ type: 'image', image: { link: urlToUse } }] });
+              }
             }
             if (comp.type === 'HEADER' && comp.format === 'TEXT' && comp.text) {
               const varMatches: string[] = comp.text.match(/\{\{\d+\}\}/g) || [];
@@ -217,7 +220,7 @@ export async function POST(request: Request) {
           let { data: conversation } = await supabaseAdmin
             .from('whatsapp_conversations')
             .select('id')
-            .eq('business_id', campaign.business_id)
+            .eq('business_id', campaign.client_id)
             .eq('contact_id', rec.contact_id)
             .maybeSingle();
 
@@ -225,7 +228,7 @@ export async function POST(request: Request) {
             const { data: newConv } = await supabaseAdmin
               .from('whatsapp_conversations')
               .insert({
-                business_id: campaign.business_id,
+                business_id: campaign.client_id,
                 contact_id: rec.contact_id,
                 unread_count: 0
               }).select('id').single();
@@ -236,12 +239,13 @@ export async function POST(request: Request) {
           const { data: newMessage } = await supabaseAdmin
             .from('whatsapp_messages')
             .insert({
-              business_id: campaign.business_id,
+              business_id: campaign.client_id,
               conversation_id: conversation!.id,
               contact_id: rec.contact_id,
               direction: 'outgoing',
               message_type: 'template',
               content: loggedMessageContent,
+              media_url: image_url || null,
               whatsapp_message_id: result.messages?.[0]?.id,
               status: 'sent',
               campaign_id: campaign.id
