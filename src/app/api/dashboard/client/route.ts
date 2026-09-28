@@ -235,12 +235,11 @@ export async function PATCH(request: Request) {
       mappedPatchData.google_sheet_id = patchData.googleSheetId;
     }
     if (patchData.timezone !== undefined) {
-      currentTsd.timezone = patchData.timezone;
-      tsdChanged = true;
+      mappedPatchData.timezone = patchData.timezone;
     }
     
-    if (tsdChanged) {
-      mappedPatchData.type_specific_data = JSON.stringify(currentTsd);
+    if (patchData.typeSpecificData !== undefined) {
+      mappedPatchData.type_specific_data = patchData.typeSpecificData;
     }
 
     if (patchData.flow_auto_start !== undefined) {
