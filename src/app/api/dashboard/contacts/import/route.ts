@@ -50,12 +50,15 @@ export async function POST(request: Request) {
       }
 
       payloadBatch.push({
-        client_id: client.clientId,
+        business_id: client.clientId,
         phone: cleanPhone,
+        normalized_phone: cleanPhone,
         name: name.trim() || null,
-        group_tags: Array.from(tagsSet),
-        source: 'import',
-        imported_at: new Date().toISOString()
+        tags: Array.from(tagsSet),
+        opt_in_source: 'imported',
+        status: 'active',
+        opt_in: true,
+        updated_at: new Date().toISOString()
       });
     }
 
@@ -66,9 +69,9 @@ export async function POST(request: Request) {
       
       const phonesInChunk = chunk.map(c => c.phone);
       const { data: existingContacts, error: fetchErr } = await supabaseAdmin
-        .from('contacts')
-        .select('id, phone, group_tags')
-        .eq('client_id', client.clientId)
+        .from('whatsapp_contacts')
+        .select('id, phone, tags')
+        .eq('business_id', client.clientId)
         .in('phone', phonesInChunk);
 
       if (fetchErr) throw fetchErr;
@@ -81,12 +84,12 @@ export async function POST(request: Request) {
       for (const row of chunk) {
         if (existingMap.has(row.phone)) {
           const existing = existingMap.get(row.phone)!;
-          const combinedTags = Array.from(new Set([...(existing.group_tags || []), ...(row.group_tags || [])]));
+          const combinedTags = Array.from(new Set([...(existing.tags || []), ...(row.tags || [])]));
           toUpdate.push({
             id: existing.id,
             name: row.name || undefined, // don't overwrite with null if they had a name
-            group_tags: combinedTags,
-            imported_at: row.imported_at,
+            tags: combinedTags,
+            updated_at: row.updated_at,
           });
         } else {
           toInsert.push(row);
@@ -94,13 +97,13 @@ export async function POST(request: Request) {
       }
 
       if (toInsert.length > 0) {
-        const { error: insertErr } = await supabaseAdmin.from('contacts').insert(toInsert);
+        const { error: insertErr } = await supabaseAdmin.from('whatsapp_contacts').insert(toInsert);
         if (insertErr) throw insertErr;
         importedCount += toInsert.length;
       }
 
       for (const upd of toUpdate) {
-        const { error: updErr } = await supabaseAdmin.from('contacts').update(upd).eq('id', upd.id);
+        const { error: updErr } = await supabaseAdmin.from('whatsapp_contacts').update(upd).eq('id', upd.id);
         if (updErr) console.error('Failed to update contact:', updErr);
       }
     }

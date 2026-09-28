@@ -15,81 +15,30 @@ export async function GET(request: Request) {
     const sourceFilter = searchParams.get('source');
     const searchFilter = searchParams.get('search');
 
-    // Concurrently fetch contacts and leads_cache
-    const [contactsResult, leadsResult] = await Promise.all([
-      supabaseAdmin
-        .from('contacts')
-        .select('*')
-        .eq('client_id', client.clientId),
-      supabaseAdmin
-        .from('leads_cache')
-        .select('*')
-        .eq('client_id', client.clientId)
-    ]);
+    const { data: contactsResult, error } = await supabaseAdmin
+      .from('whatsapp_contacts')
+      .select('*')
+      .eq('business_id', client.clientId);
 
-    if (contactsResult.error) throw contactsResult.error;
-    if (leadsResult.error) throw leadsResult.error;
+    if (error) throw error;
 
-    const contactsList = contactsResult.data || [];
-    const leadsList = leadsResult.data || [];
+    const contactsList = contactsResult || [];
 
-    // Map by normalized phone number for de-duplication and merging
-    const mergedMap = new Map<string, any>();
-
-    // 1. Process contacts table entries
-    for (const c of contactsList) {
-      const cleanPhone = normalizeAndValidatePhone(String(c.phone || '')).cleaned || String(c.phone || '').replace(/\D/g, '');
-      if (!cleanPhone) continue;
-
-      mergedMap.set(cleanPhone, {
-        id: c.id,
-        name: c.name || '',
-        phone: cleanPhone,
-        group_tags: c.group_tags || [],
-        source: c.source || 'import',
-        imported_at: c.imported_at || c.created_at || new Date().toISOString(),
-        is_dnd: !!c.is_dnd,
-        inContactsTable: true,
-        inLeadsCache: false,
-      });
-    }
-
-    // 2. Process leads_cache entries
-    for (const l of leadsList) {
-      const cleanPhone = normalizeAndValidatePhone(String(l.phone || '')).cleaned || String(l.phone || '').replace(/\D/g, '');
-      if (!cleanPhone) continue;
-
-      const leadName = l.name || l.shared_name || '';
-
-      if (mergedMap.has(cleanPhone)) {
-        const existing = mergedMap.get(cleanPhone);
-        existing.inLeadsCache = true;
-        existing.source = 'both';
-        if (!existing.name && leadName) {
-          existing.name = leadName;
-        }
-        existing.is_dnd = existing.is_dnd || !!l.is_dnd;
-      } else {
-        mergedMap.set(cleanPhone, {
-          id: `lead_${cleanPhone}`,
-          name: leadName || '',
-          phone: cleanPhone,
-          group_tags: [],
-          source: 'inbox',
-          imported_at: l.created_at || l.updated_at || new Date().toISOString(),
-          is_dnd: !!l.is_dnd,
-          inContactsTable: false,
-          inLeadsCache: true,
-        });
-      }
-    }
-
-    let mergedArray = Array.from(mergedMap.values());
+    // Map to expected UI format
+    let mappedArray = contactsList.map(c => ({
+      id: c.id,
+      name: c.name || '',
+      phone: c.normalized_phone || c.phone,
+      group_tags: c.tags || [],
+      source: c.opt_in_source || 'imported',
+      imported_at: c.created_at || new Date().toISOString(),
+      is_dnd: c.status !== 'active' || c.opt_in === false,
+    }));
 
     // Filter by tag if specified
     if (tag) {
       const cleanTag = tag.trim().toLowerCase();
-      mergedArray = mergedArray.filter(c => 
+      mappedArray = mappedArray.filter(c => 
         Array.isArray(c.group_tags) && c.group_tags.some((t: string) => t.toLowerCase() === cleanTag)
       );
     }
@@ -98,26 +47,26 @@ export async function GET(request: Request) {
     if (sourceFilter) {
       const sf = sourceFilter.trim().toLowerCase();
       if (sf === 'import' || sf === 'imported' || sf === 'manual') {
-        mergedArray = mergedArray.filter(c => c.source === 'import' || c.source === 'manual');
+        mappedArray = mappedArray.filter(c => c.source === 'imported' || c.source === 'import' || c.source === 'manual');
       } else if (sf === 'inbox') {
-        mergedArray = mergedArray.filter(c => c.source === 'inbox');
+        mappedArray = mappedArray.filter(c => c.source === 'inbox');
       } else if (sf === 'both') {
-        mergedArray = mergedArray.filter(c => c.source === 'both');
+        mappedArray = mappedArray.filter(c => c.source === 'both');
       }
     }
 
     // Filter by search if specified
     if (searchFilter) {
       const sf = searchFilter.trim().toLowerCase();
-      mergedArray = mergedArray.filter(c => 
+      mappedArray = mappedArray.filter(c => 
         (c.name && c.name.toLowerCase().includes(sf)) || c.phone.includes(sf)
       );
     }
 
     // Sort by imported_at / created_at descending
-    mergedArray.sort((a, b) => new Date(b.imported_at).getTime() - new Date(a.imported_at).getTime());
+    mappedArray.sort((a, b) => new Date(b.imported_at).getTime() - new Date(a.imported_at).getTime());
 
-    return NextResponse.json({ contacts: mergedArray });
+    return NextResponse.json({ contacts: mappedArray });
   } catch (error: any) {
     console.error('[Contacts GET] Error:', error.message);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -142,18 +91,20 @@ export async function POST(request: Request) {
     }
 
     const { data: contact, error } = await supabaseAdmin
-      .from('contacts')
+      .from('whatsapp_contacts')
       .upsert(
         {
-          client_id: client.clientId,
+          business_id: client.clientId,
           phone: cleanPhone,
+          normalized_phone: cleanPhone,
           name: name || '',
-          group_tags: group_tags || [],
-          source: source || 'manual',
-          is_dnd: is_dnd || false,
-          imported_at: new Date().toISOString()
+          tags: group_tags || [],
+          opt_in_source: source || 'manual',
+          status: is_dnd ? 'unsubscribed' : 'active',
+          opt_in: !is_dnd,
+          updated_at: new Date().toISOString()
         },
-        { onConflict: 'client_id,phone' }
+        { onConflict: 'business_id,normalized_phone' }
       )
       .select()
       .single();
@@ -179,36 +130,18 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Contact ID is required' }, { status: 400 });
     }
 
-    // Handle lead_ prefixed items (create or update in contacts table)
-    if (typeof id === 'string' && id.startsWith('lead_')) {
-      const cleanPhone = id.replace(/^lead_/, '');
-      const updateFields: any = {
-        client_id: client.clientId,
-        phone: cleanPhone,
-        imported_at: new Date().toISOString(),
-      };
-      if (group_tags !== undefined) updateFields.group_tags = group_tags;
-      if (is_dnd !== undefined) updateFields.is_dnd = is_dnd;
-
-      const { data: contact, error } = await supabaseAdmin
-        .from('contacts')
-        .upsert(updateFields, { onConflict: 'client_id,phone' })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return NextResponse.json({ success: true, contact });
+    const updateFields: any = {};
+    if (group_tags !== undefined) updateFields.tags = group_tags;
+    if (is_dnd !== undefined) {
+      updateFields.status = is_dnd ? 'unsubscribed' : 'active';
+      updateFields.opt_in = !is_dnd;
     }
 
-    const updateFields: any = {};
-    if (group_tags !== undefined) updateFields.group_tags = group_tags;
-    if (is_dnd !== undefined) updateFields.is_dnd = is_dnd;
-
     const { data: contact, error } = await supabaseAdmin
-      .from('contacts')
+      .from('whatsapp_contacts')
       .update(updateFields)
       .eq('id', id)
-      .eq('client_id', client.clientId)
+      .eq('business_id', client.clientId)
       .select()
       .single();
 
@@ -237,39 +170,17 @@ export async function DELETE(request: Request) {
     }
 
     if (id) {
-      if (id.startsWith('lead_')) {
-        const cleanPhone = id.replace(/^lead_/, '');
-        await supabaseAdmin
-          .from('leads_cache')
-          .update({ is_dnd: true })
-          .eq('phone', cleanPhone)
-          .eq('client_id', client.clientId);
-      } else {
-        await supabaseAdmin
-          .from('contacts')
-          .delete()
-          .eq('id', id)
-          .eq('client_id', client.clientId);
-      }
+      await supabaseAdmin
+        .from('whatsapp_contacts')
+        .delete()
+        .eq('id', id)
+        .eq('business_id', client.clientId);
     } else if (bulkIds) {
-      const contactDbIds = bulkIds.filter(i => !i.startsWith('lead_'));
-      const leadPhones = bulkIds.filter(i => i.startsWith('lead_')).map(i => i.replace(/^lead_/, ''));
-
-      if (contactDbIds.length > 0) {
-        await supabaseAdmin
-          .from('contacts')
-          .delete()
-          .in('id', contactDbIds)
-          .eq('client_id', client.clientId);
-      }
-
-      if (leadPhones.length > 0) {
-        await supabaseAdmin
-          .from('leads_cache')
-          .update({ is_dnd: true })
-          .in('phone', leadPhones)
-          .eq('client_id', client.clientId);
-      }
+      await supabaseAdmin
+        .from('whatsapp_contacts')
+        .delete()
+        .in('id', bulkIds)
+        .eq('business_id', client.clientId);
     }
 
     return NextResponse.json({ success: true });
