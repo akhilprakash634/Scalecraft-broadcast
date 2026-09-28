@@ -28,7 +28,6 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  eslint: { ignoreDuringBuilds: true },
   serverExternalPackages: ['ssh2'],
   images: {
     remotePatterns: [
