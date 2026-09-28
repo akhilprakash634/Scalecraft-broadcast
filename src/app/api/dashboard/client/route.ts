@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSessionClient } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase';
 import { resolveHermesContext } from '@/lib/ssh';
+import { updateClient } from '@/lib/db';
 
 export async function GET() {
   try {
@@ -223,7 +224,6 @@ export async function PATCH(request: Request) {
     }
 
     // 1. Update in Supabase
-    const { updateClient } = await import('@/lib/db');
     const mappedPatchData: any = {};
     if (patchData.businessName !== undefined) {
       mappedPatchData.business_name = patchData.businessName;
