@@ -276,7 +276,7 @@ export function mapDbClientToAgentClient(dbClient: any): AgentClient | null {
     sshPrivateKey: sshKey,
     serverUser: dbClient.server_user || 'ubuntu',
     geminiApiKey: dbClient.gemini_api_key || '',
-    timezone: dbClient.timezone || 'UTC',
+    timezone: dbClient.timezone || tsd.timezone || 'UTC',
     googleSheetId: dbClient.google_sheet_id || '',
     plan: dbClient.plan || 'starter',
     status: dbClient.status || 'pending',
