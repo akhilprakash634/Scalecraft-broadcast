@@ -220,7 +220,7 @@ export async function POST(request: Request) {
           let { data: conversation } = await supabaseAdmin
             .from('whatsapp_conversations')
             .select('id')
-            .eq('business_id', campaign.client_id)
+            .eq('business_id', campaign.business_id)
             .eq('contact_id', rec.contact_id)
             .maybeSingle();
 
@@ -228,7 +228,7 @@ export async function POST(request: Request) {
             const { data: newConv } = await supabaseAdmin
               .from('whatsapp_conversations')
               .insert({
-                business_id: campaign.client_id,
+                business_id: campaign.business_id,
                 contact_id: rec.contact_id,
                 unread_count: 0
               }).select('id').single();
@@ -239,7 +239,7 @@ export async function POST(request: Request) {
           const { data: newMessage } = await supabaseAdmin
             .from('whatsapp_messages')
             .insert({
-              business_id: campaign.client_id,
+              business_id: campaign.business_id,
               conversation_id: conversation!.id,
               contact_id: rec.contact_id,
               direction: 'outgoing',
