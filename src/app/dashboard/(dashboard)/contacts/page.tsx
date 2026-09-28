@@ -15,7 +15,8 @@ import {
   CheckSquare,
   Square,
   X,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Loader2
 } from 'lucide-react';
 
 interface Contact {
@@ -62,6 +63,7 @@ export default function ContactsPage() {
     invalidCount: number;
     totalProcessed: number;
   } | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   const fetchContacts = async () => {
     setLoading(true);
@@ -203,6 +205,7 @@ export default function ContactsPage() {
     if (!csvContent.trim()) return;
     setError('');
     setImportSummary(null);
+    setIsImporting(true);
     try {
       // Basic CSV parser
       const lines = csvContent.split('\n').map(l => l.trim()).filter(Boolean);
@@ -249,6 +252,8 @@ export default function ContactsPage() {
       fetchContacts();
     } catch (err: any) {
       setError(err.message);
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -711,9 +716,17 @@ export default function ContactsPage() {
 
                 <button
                   type="submit"
-                  className="w-full bg-gray-900 hover:bg-gray-800 text-white text-xs font-bold py-2.5 rounded-lg transition-colors cursor-pointer"
+                  disabled={isImporting || !csvContent.trim()}
+                  className="w-full bg-gray-900 hover:bg-gray-800 text-white text-xs font-bold py-2.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  Process CSV Data
+                  {isImporting ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      Processing CSV...
+                    </>
+                  ) : (
+                    'Process CSV Data'
+                  )}
                 </button>
               </form>
             )}
