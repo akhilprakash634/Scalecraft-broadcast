@@ -151,6 +151,25 @@ export async function POST(request: Request) {
                 });
               }
             }
+            if (comp.type === 'BUTTONS' && comp.buttons) {
+              comp.buttons.forEach((btn: any, idx: number) => {
+                if (btn.type === 'COPY_CODE') {
+                  metaComponents.push({
+                    type: 'button',
+                    sub_type: 'copy_code',
+                    index: idx.toString(),
+                    parameters: [{ type: 'coupon_code', coupon_code: btn.example?.[0] || 'OFFER10' }]
+                  });
+                } else if (btn.type === 'URL' && btn.url && btn.url.includes('{{1}}')) {
+                  metaComponents.push({
+                    type: 'button',
+                    sub_type: 'url',
+                    index: idx.toString(),
+                    parameters: [{ type: 'text', text: phone }] // Fallback to phone for now
+                  });
+                }
+              });
+            }
           }
         }
 
