@@ -106,7 +106,7 @@ export async function middleware(request: NextRequest) {
 
   // Protect /dashboard routes (excluding login and auth api)
   if (pathname.startsWith('/dashboard')) {
-    if (pathname === '/dashboard/login' || pathname.startsWith('/dashboard/api/') || pathname === '/dashboard/forgot-password' || pathname === '/dashboard/reset-password') {
+    if (pathname === '/login' || pathname.startsWith('/dashboard/api/') || pathname === '/dashboard/forgot-password' || pathname === '/dashboard/reset-password') {
       return NextResponse.next({
         request: {
           headers: requestHeaders,
@@ -116,13 +116,13 @@ export async function middleware(request: NextRequest) {
 
     const sessionCookie = request.cookies.get('scalecraft_session')?.value;
     if (!sessionCookie) {
-      return NextResponse.redirect(new URL('/dashboard/login', request.url));
+      return NextResponse.redirect(new URL('/login', request.url));
     }
 
     const secret = process.env.JWT_SECRET!;
     const decoded = await verifyJWT(sessionCookie, secret);
     if (!decoded) {
-      const response = NextResponse.redirect(new URL('/dashboard/login', request.url));
+      const response = NextResponse.redirect(new URL('/login', request.url));
       response.cookies.delete('scalecraft_session');
       return response;
     }
