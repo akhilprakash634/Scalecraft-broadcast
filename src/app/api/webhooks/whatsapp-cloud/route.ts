@@ -139,7 +139,8 @@ export async function POST(request: Request) {
             const wamid = msg.id;
             const timestampStr = msg.timestamp ? new Date(parseInt(msg.timestamp) * 1000).toISOString() : new Date().toISOString();
             
-            const contactName = msg.context?.from || value.contacts?.[0]?.profile?.name || fromPhone;
+            const contactMatch = value.contacts?.find((c: any) => c.wa_id === fromPhone);
+            const contactName = contactMatch?.profile?.name || fromPhone;
 
             // 1. Find or create whatsapp_contacts
             let { data: contact } = await supabaseAdmin
