@@ -44,6 +44,7 @@
     "@types/ssh2": "^1.15.5",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "jose": "^6.2.12",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

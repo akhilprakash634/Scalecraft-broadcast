@@ -10,8 +10,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
     }
 
-    // 1. Authenticate with Supabase Auth
-    const { data: authData, error: authError } = await supabaseAdmin.auth.signInWithPassword({
+    // 1. Authenticate with Supabase Auth using a temporary client so we don't mutate the global supabaseAdmin
+    const { createClient } = require('@supabase/supabase-js');
+    const tempClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
+      { auth: { persistSession: false, autoRefreshToken: false } }
+    );
+
+    const { data: authData, error: authError } = await tempClient.auth.signInWithPassword({
       email,
       password,
     });
