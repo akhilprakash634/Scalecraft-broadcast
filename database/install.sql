@@ -12,7 +12,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS public.agent_clients (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID, -- References auth.users(id) for the single tenant admin
-    name TEXT NOT NULL,
+    business_name TEXT NOT NULL,
     whatsapp_phone_number_id TEXT,
     whatsapp_business_account_id TEXT,
     whatsapp_access_token TEXT,

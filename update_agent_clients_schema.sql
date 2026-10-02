@@ -1,5 +1,6 @@
 -- Run this in your Supabase SQL Editor
 ALTER TABLE agent_clients
+ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id),
 ADD COLUMN IF NOT EXISTS owner_phone TEXT,
 ADD COLUMN IF NOT EXISTS server_ip TEXT,
 ADD COLUMN IF NOT EXISTS ssh_private_key TEXT,
