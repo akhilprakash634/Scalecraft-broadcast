@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     // In a single tenant system, there is usually only one client, but we match by user_id
     let { data: client, error: clientErr } = await supabaseAdmin
       .from('agent_clients')
-      .select('id, name, whatsapp_phone_number_id')
+      .select('id, business_name, whatsapp_phone_number_id')
       .eq('user_id', userId)
       .maybeSingle();
 
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     if (!client) {
       const { data: fallbackClient } = await supabaseAdmin
         .from('agent_clients')
-        .select('id, name, whatsapp_phone_number_id')
+        .select('id, business_name, whatsapp_phone_number_id')
         .limit(1)
         .maybeSingle();
         
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
     const payload = {
       clientId: client.id,
       botNumber: client.whatsapp_phone_number_id || 'unconfigured',
-      businessName: client.name,
+      businessName: client.business_name,
       exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60, // 7 days expiration
       iat: Math.floor(Date.now() / 1000),
     };
