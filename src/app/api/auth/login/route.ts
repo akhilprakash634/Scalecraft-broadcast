@@ -1,65 +1,43 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
 import { signJWT } from '@/lib/jwt';
+import { supabaseAdmin } from '@/lib/supabase';
+import bcrypt from 'bcryptjs';
 
 export async function POST(request: Request) {
   try {
-    const { email, password } = await request.json();
+    const { botNumber, password } = await request.json();
 
-    if (!email || !password) {
-      return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
+    if (!botNumber || !password) {
+      return NextResponse.json({ error: 'WhatsApp bot number and password are required' }, { status: 400 });
     }
 
-    // 1. Authenticate with Supabase Auth using a temporary client so we don't mutate the global supabaseAdmin
-    const { createClient } = require('@supabase/supabase-js');
-    const tempClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
-      { auth: { persistSession: false, autoRefreshToken: false } }
-    );
+    const cleanedBotNumber = String(botNumber).replace(/\D/g, '');
 
-    const { data: authData, error: authError } = await tempClient.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (authError || !authData.user) {
-      return NextResponse.json({ error: 'Incorrect email or password.' }, { status: 401 });
-    }
-
-    const userId = authData.user.id;
-
-    // 2. Map authenticated user to the AgentClient profile
-    // In a single tenant system, there is usually only one client, but we match by user_id
-    let { data: client, error: clientErr } = await supabaseAdmin
+    // Look up the client directly by bot number
+    const { data: client, error: clientErr } = await supabaseAdmin
       .from('agent_clients')
       .select('*')
-      .eq('user_id', userId)
+      .eq('whatsapp_bot_number', cleanedBotNumber)
       .maybeSingle();
 
-    // Fallback: If agent_clients hasn't been linked to user_id yet, just grab the first/only client
     if (!client) {
-      const { data: fallbackClient } = await supabaseAdmin
-        .from('agent_clients')
-        .select('*')
-        .limit(1)
-        .maybeSingle();
-        
-      if (fallbackClient) {
-        client = fallbackClient;
-        // Auto-heal: Link this user to the single tenant client profile
-        await supabaseAdmin.from('agent_clients').update({ user_id: userId }).eq('id', client.id);
-      }
+      return NextResponse.json({ error: 'Incorrect bot number or password.' }, { status: 401 });
     }
 
-    if (!client) {
-      return NextResponse.json({ error: 'Business profile not configured. Please run database setup.' }, { status: 500 });
+    if (!client.portal_password) {
+      return NextResponse.json({ error: 'No password set for this account.' }, { status: 401 });
     }
 
-    // 3. Create the legacy custom JWT so the rest of the application (getSessionClient) continues working untouched
+    // Compare hashed password
+    const isPasswordMatch = await bcrypt.compare(password, client.portal_password);
+    if (!isPasswordMatch) {
+      return NextResponse.json({ error: 'Incorrect bot number or password.' }, { status: 401 });
+    }
+
+    // Create JWT Session
     const payload = {
       clientId: client.id,
-      botNumber: client.whatsapp_phone_number_id || 'unconfigured',
+      botNumber: client.whatsapp_bot_number,
       businessName: client.business_name || client.name,
       exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60, // 7 days expiration
       iat: Math.floor(Date.now() / 1000),
@@ -69,7 +47,6 @@ export async function POST(request: Request) {
     if (!secret) {
       return NextResponse.json({ error: 'Server authentication configuration error' }, { status: 500 });
     }
-    
     const token = await signJWT(payload, secret);
 
     const response = NextResponse.json({ success: true, message: 'Logged in successfully' });
@@ -79,13 +56,13 @@ export async function POST(request: Request) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60,
+      maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
       path: '/',
     });
 
     return response;
   } catch (error: any) {
-    console.error('Login API Error:', error.message);
+    console.error('Password Login API Error:', error.message);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
