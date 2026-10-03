@@ -1,43 +1,64 @@
 import { NextResponse } from 'next/server';
 import { signJWT } from '@/lib/jwt';
 import { supabaseAdmin } from '@/lib/supabase';
-import bcrypt from 'bcryptjs';
 
 export async function POST(request: Request) {
   try {
-    const { botNumber, password } = await request.json();
+    const { email, password } = await request.json();
 
-    if (!botNumber || !password) {
-      return NextResponse.json({ error: 'WhatsApp bot number and password are required' }, { status: 400 });
+    if (!email || !password) {
+      return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
     }
 
-    const cleanedBotNumber = String(botNumber).replace(/\D/g, '');
+    // 1. Authenticate with Supabase Auth using a temporary client so we don't mutate the global supabaseAdmin
+    const { createClient } = require('@supabase/supabase-js');
+    const tempClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
+      { auth: { persistSession: false, autoRefreshToken: false } }
+    );
 
-    // Look up the client directly by bot number
-    const { data: client, error: clientErr } = await supabaseAdmin
+    const { data: authData, error: authError } = await tempClient.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (authError || !authData.user) {
+      return NextResponse.json({ error: 'Incorrect email or password.' }, { status: 401 });
+    }
+
+    const userId = authData.user.id;
+
+    // 2. Map authenticated user to the AgentClient profile
+    let { data: client, error: clientErr } = await supabaseAdmin
       .from('agent_clients')
       .select('*')
-      .eq('whatsapp_bot_number', cleanedBotNumber)
+      .eq('user_id', userId)
       .maybeSingle();
 
+    // Fallback: If agent_clients hasn't been linked to user_id yet, just grab the first/only client
     if (!client) {
-      return NextResponse.json({ error: 'Incorrect bot number or password.' }, { status: 401 });
+      const { data: fallbackClient } = await supabaseAdmin
+        .from('agent_clients')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+        
+      if (fallbackClient) {
+        client = fallbackClient;
+        // Auto-heal: Link this user to the single tenant client profile
+        await supabaseAdmin.from('agent_clients').update({ user_id: userId }).eq('id', client.id);
+      }
     }
 
-    if (!client.portal_password) {
-      return NextResponse.json({ error: 'No password set for this account.' }, { status: 401 });
+    if (!client) {
+      return NextResponse.json({ error: 'Business profile not configured. Please run database setup.' }, { status: 500 });
     }
 
-    // Compare hashed password
-    const isPasswordMatch = await bcrypt.compare(password, client.portal_password);
-    if (!isPasswordMatch) {
-      return NextResponse.json({ error: 'Incorrect bot number or password.' }, { status: 401 });
-    }
-
-    // Create JWT Session
+    // 3. Create the legacy custom JWT so the rest of the application (getSessionClient) continues working untouched
     const payload = {
       clientId: client.id,
-      botNumber: client.whatsapp_bot_number,
+      botNumber: client.whatsapp_bot_number || 'unconfigured',
       businessName: client.business_name || client.name,
       exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60, // 7 days expiration
       iat: Math.floor(Date.now() / 1000),
@@ -47,6 +68,7 @@ export async function POST(request: Request) {
     if (!secret) {
       return NextResponse.json({ error: 'Server authentication configuration error' }, { status: 500 });
     }
+    
     const token = await signJWT(payload, secret);
 
     const response = NextResponse.json({ success: true, message: 'Logged in successfully' });

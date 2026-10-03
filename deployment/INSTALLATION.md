@@ -35,6 +35,14 @@ Click **Add User** -> **Create New User**.
 Enter the administrator's email and generate a strong, secure, random password. 
 *(Do NOT use simple passwords, and do NOT commit this password anywhere in the repository).*
 
+## STEP 6b: Create the Business Profile Row
+In the Supabase SQL Editor, run the following command to create the initial business profile container (replace with your business name and real WhatsApp number):
+```sql
+INSERT INTO public.agent_clients (business_name, whatsapp_bot_number)
+VALUES ('My Business Name', '9876543210');
+```
+*Note: When you log in for the first time using the email from Step 6, the system will automatically detect this row and link it to your admin email securely.*
+
 ## STEP 7: Create Vercel Project
 Log in to Vercel and click **Add New -> Project**.
 

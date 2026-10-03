@@ -5,15 +5,15 @@ import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [botNumber, setBotNumber] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!botNumber.trim() || !password.trim()) {
-      setError('Please enter your WhatsApp bot number and password');
+    if (!email.trim() || !password.trim()) {
+      setError('Please enter your email and password');
       return;
     }
 
@@ -24,7 +24,7 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ botNumber, password }),
+        body: JSON.stringify({ email, password }),
       });
 
       const data = await res.json();
@@ -57,7 +57,7 @@ export default function LoginPage() {
           Administrator Login
         </h2>
         <p className="text-sm text-[#6F6E69] mb-6">
-          Enter your WhatsApp bot number and password to access your dashboard.
+          Enter your email and password to access your dashboard.
         </p>
 
         {error && (
@@ -68,15 +68,15 @@ export default function LoginPage() {
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label htmlFor="botNumber" className="block text-xs font-bold text-[#111110] uppercase tracking-wide mb-1.5">
-              WhatsApp Bot Number
+            <label htmlFor="email" className="block text-xs font-bold text-[#111110] uppercase tracking-wide mb-1.5">
+              Email Address
             </label>
             <input
-              id="botNumber"
-              type="text"
-              value={botNumber}
-              onChange={(e) => setBotNumber(e.target.value)}
-              placeholder="e.g. 1234567890"
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin@yourbusiness.com"
               className="w-full text-sm border border-[#EBEBEB] rounded-lg px-4 py-3 bg-[#F8FBF8] focus:outline-none focus:border-[#1B5E20] focus:ring-1 focus:ring-[#1B5E20] transition-colors"
               disabled={loading}
             />
